@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { config } from '../consts/config';
+import { CardPage } from '../flows/CardPage';
 import { logger } from '../utils/logger';
 import { assembleChainMetadata } from './chains/metadata';
 import { DeploymentContext, DeploymentStatus, FinalDeploymentStatuses } from './deployment/types';
@@ -35,6 +36,9 @@ export interface AppState {
   failUnconfirmedDeployments: () => void;
 
   // Shared component state
+  cardPage: CardPage;
+  direction: 'forward' | 'backward';
+  setCardPage: (page: CardPage) => void;
   deploymentLoading: boolean;
   setDeploymentLoading: (isLoading: boolean) => void;
   isSideBarOpen: boolean;
@@ -98,6 +102,11 @@ export const useStore = create<AppState>()(
       },
 
       // Shared component state
+      cardPage: CardPage.Landing,
+      direction: 'forward',
+      setCardPage: (page) => {
+        set((s) => ({ cardPage: page, direction: page >= s.cardPage ? 'forward' : 'backward' }));
+      },
       deploymentLoading: false,
       setDeploymentLoading: (isLoading) => {
         set(() => ({ deploymentLoading: isLoading }));

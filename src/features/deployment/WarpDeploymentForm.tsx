@@ -3,9 +3,11 @@ import { ProtocolType, errorToString } from '@hyperlane-xyz/utils';
 import { AccountInfo, ChevronIcon, useAccounts } from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
 import { useState } from 'react';
+import { BackButton } from '../../components/buttons/BackButton';
 import { ConnectAwareSubmitButton } from '../../components/buttons/ConnectAwareSubmitButton';
 import { SolidButton } from '../../components/buttons/SolidButton';
 import { config } from '../../consts/config';
+import { CardPage } from '../../flows/CardPage';
 import { Color } from '../../styles/Color';
 import { logger } from '../../utils/logger';
 import { ChainConnectionWarning } from '../chains/ChainConnectionWarning';
@@ -20,7 +22,7 @@ const initialValues = {
   destination: arbitrum.name,
 };
 
-export function DeploymentForm() {
+export function WarpDeploymentForm() {
   const multiProvider = useMultiProvider();
 
   const { accounts } = useAccounts(multiProvider, config.addressBlacklist);
@@ -108,11 +110,14 @@ function ButtonSection({
 
   if (!isReview) {
     return (
-      <ConnectAwareSubmitButton
-        chainName={values.origin}
-        text={isValidating ? 'Validating...' : 'Continue'}
-        classes="mt-4 px-3 py-1.5"
-      />
+      <div className="mt-4 flex items-center justify-between">
+        <BackButton page={CardPage.Landing} />
+        <ConnectAwareSubmitButton
+          chainName={values.origin}
+          text={isValidating ? 'Validating...' : 'Continue'}
+          classes="px-3 py-1.5"
+        />
+      </div>
     );
   }
 
@@ -122,7 +127,7 @@ function ButtonSection({
         type="button"
         color="primary"
         onClick={() => setIsReview(false)}
-        classes="px-6 py-1.5"
+        className="px-6 py-1.5"
         icon={<ChevronIcon direction="w" width={10} height={6} color={Color.white} />}
       >
         <span>Edit</span>
@@ -131,7 +136,7 @@ function ButtonSection({
         type="button"
         color="accent"
         onClick={triggerTransactionsHandler}
-        classes="flex-1 px-3 py-1.5"
+        className="flex-1 px-3 py-1.5"
       >
         {`Send to ${chainDisplayName}`}
       </SolidButton>
