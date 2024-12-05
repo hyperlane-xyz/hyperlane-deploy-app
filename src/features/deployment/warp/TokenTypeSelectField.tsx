@@ -5,7 +5,6 @@ const TokenTypes = Object.values(TokenType);
 
 export function TokenTypeSelectField({
   value,
-  onChange,
 }: {
   value: TokenType;
   onChange: (t: TokenType) => void;
