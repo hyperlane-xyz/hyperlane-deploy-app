@@ -1,8 +1,7 @@
 import { ChainSearchMenuProps, ChevronIcon } from '@hyperlane-xyz/widgets';
-import { useField, useFormikContext } from 'formik';
+import { useField } from 'formik';
 import { useState } from 'react';
 import { ChainLogo } from '../../components/icons/ChainLogo';
-import { DeploymentFormValues } from '../deployment/types';
 import { ChainSelectListModal } from './ChainSelectModal';
 import { useChainDisplayName } from './hooks';
 
@@ -16,16 +15,11 @@ type Props = {
 
 export function ChainSelectField({ name, label, onChange, disabled, customListItemField }: Props) {
   const [field, , helpers] = useField<ChainName>(name);
-  const { setFieldValue } = useFormikContext<DeploymentFormValues>();
 
   const displayName = useChainDisplayName(field.value, true);
 
   const handleChange = (chainName: ChainName) => {
     helpers.setValue(chainName);
-    // Reset other fields on chain change
-    setFieldValue('recipient', '');
-    setFieldValue('amount', '');
-    setFieldValue('tokenIndex', undefined);
     if (onChange) onChange(chainName);
   };
 

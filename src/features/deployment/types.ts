@@ -1,8 +1,3 @@
-export interface DeploymentFormValues {
-  origin: ChainName;
-  destination: ChainName;
-}
-
 export enum DeploymentStatus {
   Preparing = 'preparing',
   CreatingTxs = 'creating-txs',
@@ -11,10 +6,12 @@ export enum DeploymentStatus {
   SigningDeployment = 'signing-deployment',
   ConfirmingDeployment = 'confirming-deployment',
   ConfirmedDeployment = 'confirmed-deployment',
+  // TODO
   Delivered = 'delivered',
   Failed = 'failed',
 }
 
+// TODO
 export const SentDeploymentStatuses = [
   DeploymentStatus.ConfirmedDeployment,
   DeploymentStatus.Delivered,
