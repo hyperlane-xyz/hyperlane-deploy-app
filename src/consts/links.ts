@@ -4,7 +4,7 @@ export const links = {
   discord: 'https://discord.gg/VK9ZUy3aTV',
   github: 'https://github.com/hyperlane-xyz/hyperlane-warp-ui-template',
   docs: 'https://docs.hyperlane.xyz',
-  warpDocs: 'https://docs.hyperlane.xyz/docs/reference/applications/warp-routes',
+  warpDocs: 'https://docs.hyperlane.xyz/docs/protocol/warp-routes/warp-routes-overview',
   gasDocs: 'https://docs.hyperlane.xyz/docs/reference/hooks/interchain-gas',
   chains: 'https://docs.hyperlane.xyz/docs/resources/domains',
   twitter: 'https://twitter.com/hyperlane',

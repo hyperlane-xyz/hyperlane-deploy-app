@@ -8,6 +8,7 @@ import { ConnectAwareSubmitButton } from '../../../components/buttons/ConnectAwa
 import { H1 } from '../../../components/text/H1';
 import { config } from '../../../consts/config';
 import { CardPage } from '../../../flows/CardPage';
+import { Stepper } from '../../../flows/Stepper';
 import { logger } from '../../../utils/logger';
 import { ChainConnectionWarning } from '../../chains/ChainConnectionWarning';
 import { ChainSelectField } from '../../chains/ChainSelectField';
@@ -52,9 +53,11 @@ export function WarpDeploymentForm() {
       {() => (
         <Form className="flex w-full flex-col items-stretch">
           <WarningBanners />
-          <HeaderSection />
-          <ConfigListSection />
-          <ButtonSection />
+          <div className="space-y-6">
+            <HeaderSection />
+            <ConfigListSection />
+            <ButtonSection />
+          </div>
         </Form>
       )}
     </Formik>
@@ -65,7 +68,7 @@ function HeaderSection() {
   return (
     <div className="flex items-center justify-between gap-4">
       <H1>Configure Warp Route</H1>
-      <div>TODO dots</div>
+      <Stepper numSteps={5} currentStep={2} />
     </div>
   );
 }
