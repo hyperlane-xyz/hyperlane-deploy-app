@@ -1,5 +1,7 @@
 import { TokenType } from '@hyperlane-xyz/sdk';
+import { toTitleCase } from '@hyperlane-xyz/utils';
 import { Button, Modal, useModal } from '@hyperlane-xyz/widgets';
+import { FormButton } from '../../../components/buttons/FormButton';
 
 const TokenTypes = Object.values(TokenType);
 
@@ -12,7 +14,7 @@ export function TokenTypeSelectField({
   const { isOpen, close, open } = useModal();
 
   return (
-    <div className="mt-2 flex items-center justify-between gap-4">
+    <div>
       <TokenTypeButton value={value} onClick={open} />
       <Modal isOpen={isOpen} close={close} panelClassname="p-4 md:p-5 max-w-sm">
         {TokenTypes.map((t, i) => (
@@ -25,12 +27,12 @@ export function TokenTypeSelectField({
 
 function TokenTypeButton({ value, onClick }: { value: TokenType; onClick: () => void }) {
   return (
-    <Button onClick={onClick} className="flex items-center gap-2 px-4 py-2">
-      <label htmlFor="tokenIndex" className="block pl-0.5 text-sm text-gray-600">
+    <FormButton onClick={onClick} className="flex-col">
+      <label htmlFor="tokenIndex" className="text-xs text-gray-600">
         Token Type
       </label>
-      <div>{value}</div>
-    </Button>
+      <div>{toTitleCase(value)}</div>
+    </FormButton>
   );
 }
 

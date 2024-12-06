@@ -86,10 +86,29 @@ function ConfigListSection() {
 }
 
 function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry; index: number }) {
+  const { values, setValues } = useFormikContext<WarpDeploymentFormValues>();
+
+  const onChange = (update: Partial<WarpDeploymentConfigEntry>) => {
+    const allConfigs = [...values.configs];
+    const updatedConfig = { ...allConfigs[index], ...update };
+    allConfigs[index] = updatedConfig;
+    setValues({ configs: allConfigs });
+  };
+
   return (
     <div className="mt-2 flex items-center justify-between gap-4">
-      <ChainSelectField name={`chainName-${index}`} label="Chain" />
-      <TokenTypeSelectField value={config.tokenType} onChange={() => {}} />
+      <ChainSelectField
+        value={config.chainName}
+        onChange={(v) => {
+          onChange({ chainName: v });
+        }}
+      />
+      <TokenTypeSelectField
+        value={config.tokenType}
+        onChange={(v) => {
+          onChange({ tokenType: v });
+        }}
+      />
     </div>
   );
 }
