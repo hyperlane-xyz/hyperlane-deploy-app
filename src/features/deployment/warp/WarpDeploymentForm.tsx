@@ -78,7 +78,7 @@ function ConfigListSection() {
   const { values } = useFormikContext<WarpDeploymentFormValues>();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {values.configs.map((config, index) => (
         <ChainTokenConfig key={index} index={index} config={config} />
       ))}
@@ -113,7 +113,7 @@ function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry
           <XIcon width={8} height={8} color={Color.gray['500']} />
         </IconButton>
       </div>
-      <div className="flex items-center justify-stretch gap-6">
+      <div className="flex items-center justify-stretch gap-4">
         <ChainSelectField
           value={config.chainName}
           onChange={(v) => {
