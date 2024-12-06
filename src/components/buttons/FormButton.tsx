@@ -6,7 +6,7 @@ export function FormButton({ className, ...props }: ComponentProps<typeof Button
   return (
     <Button
       className={clsx(
-        'flex items-center justify-between rounded-lg border border-primary-300 px-2 py-1.5 text-sm',
+        'flex items-center justify-between rounded-lg border border-primary-300 px-2 py-1.5 text-sm hover:bg-gray-50',
         className,
       )}
       {...props}
