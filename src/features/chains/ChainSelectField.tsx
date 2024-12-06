@@ -15,18 +15,18 @@ export function ChainSelectField({ value, onChange }: Props) {
   const { isOpen, close, open } = useModal();
 
   return (
-    <div>
-      <FormButton onClick={open}>
+    <div className="flex-1 grow">
+      <FormButton onClick={open} className="w-full gap-2 bg-white">
         <div className="flex items-center gap-3">
           <div className="max-w-[1.4rem] sm:max-w-fit">
-            <ChainLogo chainName={value} size={32} />
+            <ChainLogo chainName={value} size={30} />
           </div>
           <div className="gap- flex flex-col items-start">
-            <label className="text-xs text-gray-600">Chain</label>
+            <label className="cursor-pointer text-xs text-gray-600">Chain</label>
             {displayName}
           </div>
         </div>
-        <ChevronIcon width={12} height={8} direction="s" />
+        <ChevronIcon width={11} height={8} direction="s" />
       </FormButton>
       <ChainSelectListModal isOpen={isOpen} close={close} onSelect={onChange} />
     </div>

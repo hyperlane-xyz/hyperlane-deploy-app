@@ -1,24 +1,88 @@
 import { TokenType } from '@hyperlane-xyz/sdk';
-import { toTitleCase } from '@hyperlane-xyz/utils';
-import { Button, Modal, useModal } from '@hyperlane-xyz/widgets';
+import { Button, ChevronIcon, Modal, useModal } from '@hyperlane-xyz/widgets';
 import { FormButton } from '../../../components/buttons/FormButton';
 
-const TokenTypes = Object.values(TokenType);
+const TokenTypes = Object.values(TokenType).sort();
+const TokenTypeDescriptions: Record<TokenType, { label: string; description: string }> = {
+  [TokenType.collateral]: {
+    label: 'Collateral',
+    description: 'A lock-and-mint wrapper for ERC20 tokens.',
+  },
+  [TokenType.collateralFiat]: {
+    label: 'Collateral Fiat',
+    description: 'A lock-and-mint wrapper for the FiatToken standard by Circle.',
+  },
+  [TokenType.collateralUri]: {
+    label: 'Collateral NFT',
+    description: 'A lock-and-mint wrapper for ERC721 tokens.',
+  },
+  [TokenType.collateralVault]: {
+    label: 'Collateral Vault',
+    description:
+      'A lock-and-mint wrapper for ERC4626 vaults. Yields are manually claimed by owner.',
+  },
+  [TokenType.collateralVaultRebase]: {
+    label: 'Collateral Rebased Vault',
+    description: 'A lock-and-mint wrapper for ERC4626 vaults. Rebases yields to token holders.',
+  },
+  [TokenType.fastCollateral]: {
+    label: 'Fast Collateral',
+    description: 'A collateralized wrapper but with support for LP-provided faster transfers.',
+  },
+  [TokenType.fastSynthetic]: {
+    label: 'Fast Synthetic',
+    description: 'A synthetic HypErc20 token to pair with a Fast Collateral token.',
+  },
+  [TokenType.native]: {
+    label: 'Native',
+    description: 'A lock-and-mint wrapper for native currencies such as Ether (ETH).',
+  },
+  [TokenType.nativeScaled]: {
+    label: 'Fast Collateral',
+    description: 'A native type but with support for token decimal scaling.',
+  },
+  [TokenType.synthetic]: {
+    label: 'Synthetic',
+    description: 'A synthetic HypErc20 token to pair with any collateralized type.',
+  },
+  [TokenType.syntheticRebase]: {
+    label: 'Synthetic Rebased',
+    description: 'A synthetic HypErc20 token to pair with a Collateral Rebased Vault.',
+  },
+  [TokenType.syntheticUri]: {
+    label: 'Synthetic NFT',
+    description: 'A synthetic HypErc721 token to pair with a Collateral NFT.',
+  },
+  [TokenType.XERC20]: {
+    label: 'xERC20',
+    description: 'A lock-and-mint wrapper for xERC20 tokens.',
+  },
+  [TokenType.XERC20Lockbox]: {
+    label: 'xERC20 Lockbox',
+    description: 'A lock-and-mint wrapper for xERC20 Lockbox tokens.',
+  },
+};
 
 export function TokenTypeSelectField({
   value,
+  onChange,
 }: {
   value: TokenType;
   onChange: (t: TokenType) => void;
 }) {
   const { isOpen, close, open } = useModal();
 
+  const onClick = (t: TokenType) => {
+    onChange(t);
+    close();
+  };
+
   return (
-    <div>
+    <div className="flex-1 grow">
       <TokenTypeButton value={value} onClick={open} />
-      <Modal isOpen={isOpen} close={close} panelClassname="p-4 md:p-5 max-w-sm">
+      <Modal isOpen={isOpen} close={close} panelClassname="px-2 py-3 max-w-sm divide-y">
         {TokenTypes.map((t, i) => (
-          <TokenTypeOption type={t} close={close} key={i} />
+          <TokenTypeOption type={t} onClick={onClick} key={i} />
         ))}
       </Modal>
     </div>
@@ -27,23 +91,24 @@ export function TokenTypeSelectField({
 
 function TokenTypeButton({ value, onClick }: { value: TokenType; onClick: () => void }) {
   return (
-    <FormButton onClick={onClick} className="flex-col">
-      <label htmlFor="tokenIndex" className="text-xs text-gray-600">
-        Token Type
-      </label>
-      <div>{toTitleCase(value)}</div>
+    <FormButton onClick={onClick} className="w-full gap-2 bg-white hover:bg-gray-100">
+      <div className="flex flex-col items-start">
+        <label className="cursor-pointer text-xs text-gray-600">Token Type</label>
+        <span>{TokenTypeDescriptions[value].label}</span>
+      </div>
+      <ChevronIcon width={11} height={8} direction="s" />
     </FormButton>
   );
 }
 
-function TokenTypeOption({ type, close }: { type: TokenType; close: () => void }) {
-  const onClick = () => {
-    close();
-  };
-
+function TokenTypeOption({ type, onClick }: { type: TokenType; onClick: (t: TokenType) => void }) {
   return (
-    <Button onClick={onClick} className="flex items-center gap-2 px-4 py-2">
-      {type}
+    <Button
+      onClick={() => onClick(type)}
+      className="flex w-full flex-col items-start gap-px rounded px-3 py-2 text-left hover:bg-gray-100 hover:opacity-100"
+    >
+      <h3 className="text-sm font-medium text-blue-500">{TokenTypeDescriptions[type].label}</h3>
+      <p className="text-xs text-gray-800">{TokenTypeDescriptions[type].description}</p>
     </Button>
   );
 }

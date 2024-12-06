@@ -1,7 +1,7 @@
 import { arbitrum, ethereum } from '@hyperlane-xyz/registry';
 import { TokenType } from '@hyperlane-xyz/sdk';
-import { ProtocolType, errorToString } from '@hyperlane-xyz/utils';
-import { AccountInfo, useAccounts } from '@hyperlane-xyz/widgets';
+import { errorToString, ProtocolType } from '@hyperlane-xyz/utils';
+import { AccountInfo, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
 import { BackButton } from '../../../components/buttons/BackButton';
 import { ConnectAwareSubmitButton } from '../../../components/buttons/ConnectAwareSubmitButton';
@@ -9,6 +9,7 @@ import { H1 } from '../../../components/text/H1';
 import { config } from '../../../consts/config';
 import { CardPage } from '../../../flows/CardPage';
 import { Stepper } from '../../../flows/Stepper';
+import { Color } from '../../../styles/Color';
 import { logger } from '../../../utils/logger';
 import { ChainConnectionWarning } from '../../chains/ChainConnectionWarning';
 import { ChainSelectField } from '../../chains/ChainSelectField';
@@ -77,7 +78,7 @@ function ConfigListSection() {
   const { values } = useFormikContext<WarpDeploymentFormValues>();
 
   return (
-    <div className="">
+    <div className="space-y-4">
       {values.configs.map((config, index) => (
         <ChainTokenConfig key={index} index={index} config={config} />
       ))}
@@ -95,20 +96,37 @@ function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry
     setValues({ configs: allConfigs });
   };
 
+  const isRemoveDisabled = values.configs.length <= 2;
+
+  const onRemove = () => {
+    if (isRemoveDisabled) return;
+    const allConfigs = [...values.configs];
+    allConfigs.splice(index, 1);
+    setValues({ configs: allConfigs });
+  };
+
   return (
-    <div className="mt-2 flex items-center justify-between gap-4">
-      <ChainSelectField
-        value={config.chainName}
-        onChange={(v) => {
-          onChange({ chainName: v });
-        }}
-      />
-      <TokenTypeSelectField
-        value={config.tokenType}
-        onChange={(v) => {
-          onChange({ tokenType: v });
-        }}
-      />
+    <div className="space-y-1.5 rounded-lg bg-blue-500/5 px-3 pb-3 pt-2">
+      <div className="flex justify-between">
+        <h3 className="pl-1 text-xs text-gray-700">{`Chain ${index + 1}`}</h3>
+        <IconButton title="Remove" onClick={onRemove} disabled={isRemoveDisabled}>
+          <XIcon width={8} height={8} color={Color.gray['500']} />
+        </IconButton>
+      </div>
+      <div className="flex items-center justify-stretch gap-6">
+        <ChainSelectField
+          value={config.chainName}
+          onChange={(v) => {
+            onChange({ chainName: v });
+          }}
+        />
+        <TokenTypeSelectField
+          value={config.tokenType}
+          onChange={(v) => {
+            onChange({ tokenType: v });
+          }}
+        />
+      </div>
     </div>
   );
 }
