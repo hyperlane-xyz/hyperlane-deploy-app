@@ -1,14 +1,17 @@
 import { arbitrum, ethereum } from '@hyperlane-xyz/registry';
 import { TokenType } from '@hyperlane-xyz/sdk';
 import { errorToString, ProtocolType } from '@hyperlane-xyz/utils';
-import { AccountInfo, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
+import { AccountInfo, Button, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
+import Image from 'next/image';
 import { BackButton } from '../../../components/buttons/BackButton';
 import { ConnectAwareSubmitButton } from '../../../components/buttons/ConnectAwareSubmitButton';
+import { TextInput } from '../../../components/input/TextField';
 import { H1 } from '../../../components/text/H1';
 import { config } from '../../../consts/config';
 import { CardPage } from '../../../flows/CardPage';
 import { Stepper } from '../../../flows/Stepper';
+import PlusCircleIcon from '../../../images/icons/plus-circle.svg';
 import { Color } from '../../../styles/Color';
 import { logger } from '../../../utils/logger';
 import { ChainConnectionWarning } from '../../chains/ChainConnectionWarning';
@@ -17,6 +20,7 @@ import { ChainWalletWarning } from '../../chains/ChainWalletWarning';
 import { useMultiProvider } from '../../chains/hooks';
 import { TokenTypeSelectField } from './TokenTypeSelectField';
 import { WarpDeploymentConfigEntry, WarpDeploymentFormValues } from './types';
+import { isCollateralizedTokenType } from './utils';
 
 const initialValues: WarpDeploymentFormValues = {
   configs: [
@@ -82,6 +86,7 @@ function ConfigListSection() {
       {values.configs.map((config, index) => (
         <ChainTokenConfig key={index} index={index} config={config} />
       ))}
+      <AddConfigButton />
     </div>
   );
 }
@@ -89,20 +94,21 @@ function ConfigListSection() {
 function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry; index: number }) {
   const { values, setValues } = useFormikContext<WarpDeploymentFormValues>();
 
-  const onChange = (update: Partial<WarpDeploymentConfigEntry>) => {
-    const allConfigs = [...values.configs];
-    const updatedConfig = { ...allConfigs[index], ...update };
-    allConfigs[index] = updatedConfig;
-    setValues({ configs: allConfigs });
-  };
-
   const isRemoveDisabled = values.configs.length <= 2;
+  const isCollateralized = isCollateralizedTokenType(config.tokenType);
+
+  const onChange = (update: Partial<WarpDeploymentConfigEntry>) => {
+    const configs = [...values.configs];
+    const updatedConfig = { ...configs[index], ...update };
+    configs[index] = updatedConfig;
+    setValues({ configs: configs });
+  };
 
   const onRemove = () => {
     if (isRemoveDisabled) return;
-    const allConfigs = [...values.configs];
-    allConfigs.splice(index, 1);
-    setValues({ configs: allConfigs });
+    const configs = [...values.configs];
+    configs.splice(index, 1);
+    setValues({ configs: configs });
   };
 
   return (
@@ -127,7 +133,42 @@ function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry
           }}
         />
       </div>
+      {/* TODO animate entry */}
+      {isCollateralized && (
+        <div>
+          <TextInput
+            value={config.tokenAddress}
+            onChange={(v) => onChange({ tokenAddress: v })}
+            placeholder="Token address (0x123...)"
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
+  );
+}
+
+function AddConfigButton() {
+  const { values, setValues } = useFormikContext<WarpDeploymentFormValues>();
+
+  const onClick = () => {
+    const configs = [...values.configs];
+    configs.push({
+      chainName: '',
+      tokenType: TokenType.synthetic,
+      tokenAddress: '',
+    });
+    setValues({ configs });
+  };
+
+  return (
+    <Button
+      onClick={onClick}
+      className="flex w-full items-center gap-2 rounded-lg bg-blue-500/5 px-3 py-1.5 hover:bg-blue-500/10 hover:opacity-100"
+    >
+      <Image width={13} height={13} src={PlusCircleIcon} alt="Add Chain" />
+      <span className="text-sm">Add Chain</span>
+    </Button>
   );
 }
 

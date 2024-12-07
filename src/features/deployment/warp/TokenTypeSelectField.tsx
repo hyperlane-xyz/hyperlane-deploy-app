@@ -105,7 +105,7 @@ function TokenTypeOption({ type, onClick }: { type: TokenType; onClick: (t: Toke
   return (
     <Button
       onClick={() => onClick(type)}
-      className="flex w-full flex-col items-start gap-px rounded px-3 py-2 text-left hover:bg-gray-100 hover:opacity-100"
+      className="flex w-full flex-col items-start gap-px rounded border-gray-100 px-3 py-2 text-left hover:bg-gray-100 hover:opacity-100"
     >
       <h3 className="text-sm font-medium text-primary-500">{TokenTypeDescriptions[type].label}</h3>
       <p className="text-xs text-gray-700">{TokenTypeDescriptions[type].description}</p>
