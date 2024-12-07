@@ -1,5 +1,8 @@
+import Image from 'next/image';
 import { SolidButton } from '../components/buttons/SolidButton';
 import { links } from '../consts/links';
+import BlueWave from '../images/illustrations/blue-wave.svg';
+import SpaceCraft from '../images/illustrations/spacecraft.webp';
 import { CardPage } from './CardPage';
 import { useCardNav } from './hooks';
 
@@ -8,16 +11,20 @@ export function LandingPage() {
 
   return (
     <div className="space-y-6 p-4 text-center">
+      <div className="relative -mx-8 flex items-center justify-center">
+        <Image src={BlueWave} alt="" className="absolute left-0 right-0 top-[0.5rem] rotate-6" />
+        <Image width={110} height={110} src={SpaceCraft} alt="" className="z-[5] -rotate-[16deg]" />
+      </div>
       <h1 className="text-2xl text-primary-500">Deploy a Warp Route</h1>
-      <h2 className="text-md">
+      <h2 className="px-2 text-md leading-relaxed">
         Anyone can permissionlessly create an interchain token bridge by deploying Hyperlane Warp
         Route contracts.
       </h2>
-      <p className="text-sm">
+      <p className="px-2 text-sm leading-relaxed">
         Follow three steps to create a new route: configure your options, deploy your contracts, and
         set up a bridge UI.
       </p>
-      <div className="flex justify-center gap-12">
+      <div className="flex justify-center gap-12 pt-1">
         <a
           href={links.warpDocs}
           target="_blank"
