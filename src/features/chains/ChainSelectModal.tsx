@@ -31,7 +31,6 @@ export function ChainSelectListModal({
         onClickChain={onSelectChain}
         overrideChainMetadata={chainMetadataOverrides}
         onChangeOverrideMetadata={setChainMetadataOverrides}
-        defaultSortField="custom"
         showChainDetails={showChainDetails}
       />
     </Modal>

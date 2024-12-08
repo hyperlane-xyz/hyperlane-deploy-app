@@ -5,7 +5,7 @@ import {
   ChainMetadataSchema,
   mergeChainMetadataMap,
 } from '@hyperlane-xyz/sdk';
-import { objMap, promiseObjAll } from '@hyperlane-xyz/utils';
+import { objFilter, objMap, promiseObjAll, ProtocolType } from '@hyperlane-xyz/utils';
 import { z } from 'zod';
 import { chains as ChainsTS } from '../../consts/chains.ts';
 import ChainsYaml from '../../consts/chains.yaml';
@@ -47,7 +47,13 @@ export async function assembleChainMetadata(
     ),
   );
 
-  const chainMetadata = mergeChainMetadataMap(registryChainMetadata, filesystemMetadata);
+  // TODO remove if/when this app isn't EVM-only
+  const evmRegistryChainMetadata = objFilter(
+    registryChainMetadata,
+    (_, m): m is ChainMetadata => m.protocol === ProtocolType.Ethereum,
+  );
+
+  const chainMetadata = mergeChainMetadataMap(evmRegistryChainMetadata, filesystemMetadata);
   const chainMetadataWithOverrides = mergeChainMetadataMap(chainMetadata, storeMetadataOverrides);
   return { chainMetadata, chainMetadataWithOverrides };
 }

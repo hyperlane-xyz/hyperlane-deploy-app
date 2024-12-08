@@ -4,6 +4,7 @@ import { errorToString, ProtocolType } from '@hyperlane-xyz/utils';
 import { AccountInfo, Button, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
 import Image from 'next/image';
+import { useMemo } from 'react';
 import { BackButton } from '../../../components/buttons/BackButton';
 import { ConnectAwareSubmitButton } from '../../../components/buttons/ConnectAwareSubmitButton';
 import { TextInput } from '../../../components/input/TextField';
@@ -58,7 +59,7 @@ export function WarpDeploymentForm() {
       {() => (
         <Form className="flex w-full flex-col items-stretch">
           <WarningBanners />
-          <div className="space-y-6">
+          <div className="space-y-5">
             <HeaderSection />
             <ConfigListSection />
             <ButtonSection />
@@ -174,15 +175,14 @@ function AddConfigButton() {
 
 function ButtonSection() {
   const { values } = useFormikContext<WarpDeploymentFormValues>();
-
+  const chains = useMemo(() => values.configs.map((c) => c.chainName), [values]);
   return (
     <div className="mt-4 flex items-center justify-between">
       <BackButton page={CardPage.Landing} />
-      {/* // TODO check for all chains, not just one */}
-      <ConnectAwareSubmitButton
-        chainName={values.configs[0].chainName}
+      <ConnectAwareSubmitButton<WarpDeploymentFormValues>
+        chains={chains}
         text="Continue"
-        classes="px-3 py-1.5"
+        className="px-3 py-1.5"
       />
     </div>
   );

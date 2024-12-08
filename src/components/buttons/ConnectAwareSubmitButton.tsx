@@ -1,34 +1,38 @@
-import { ProtocolType } from '@hyperlane-xyz/utils';
-import { useAccountForChain, useConnectFns, useTimeout } from '@hyperlane-xyz/widgets';
+import { useAccounts, useConnectFns, useTimeout } from '@hyperlane-xyz/widgets';
 import { useFormikContext } from 'formik';
-import { useCallback } from 'react';
-import { useChainProtocol, useMultiProvider } from '../../features/chains/hooks';
+import { useCallback, useMemo } from 'react';
+import { useMultiProvider } from '../../features/chains/hooks';
 import { SolidButton } from './SolidButton';
 
 interface Props {
-  chainName: ChainName;
+  chains: ChainName[];
   text: string;
-  classes?: string;
+  className?: string;
 }
 
-export function ConnectAwareSubmitButton<FormValues = any>({ chainName, text, classes }: Props) {
-  const protocol = useChainProtocol(chainName) || ProtocolType.Ethereum;
-  const connectFns = useConnectFns();
-  const connectFn = connectFns[protocol];
-
+export function ConnectAwareSubmitButton<FormValues>({ chains, text, className }: Props) {
   const multiProvider = useMultiProvider();
-  const account = useAccountForChain(multiProvider, chainName);
-  const isAccountReady = account?.isReady;
+  const { accounts } = useAccounts(multiProvider);
+  const connectFns = useConnectFns();
+
+  const unconnectedProtocols = useMemo(() => {
+    const protocols = new Set(chains.map((c) => multiProvider.getProtocol(c)));
+    return [...protocols.values().filter((p) => !accounts[p]?.isReady)];
+  }, [accounts, chains, multiProvider]);
+  const isAccountsReady = unconnectedProtocols.length === 0;
 
   const { errors, setErrors, touched, setTouched } = useFormikContext<FormValues>();
 
   const hasError = Object.keys(touched).length > 0 && Object.keys(errors).length > 0;
-  const firstError = `${Object.values(errors)[0]}` || 'Unknown error';
 
   const color = hasError ? 'red' : 'accent';
-  const content = hasError ? firstError : isAccountReady ? text : 'Connect wallet';
-  const type = isAccountReady ? 'submit' : 'button';
-  const onClick = isAccountReady ? undefined : connectFn;
+  const type = isAccountsReady ? 'submit' : 'button';
+  const onClick = isAccountsReady ? undefined : connectFns[unconnectedProtocols[0]];
+
+  let content;
+  if (hasError) content = 'Error';
+  else if (isAccountsReady) content = text;
+  else content = `Connect wallet${unconnectedProtocols.length > 1 ? 's' : ''}`;
 
   // Automatically clear error state after a timeout
   const clearErrors = useCallback(() => {
@@ -40,7 +44,7 @@ export function ConnectAwareSubmitButton<FormValues = any>({ chainName, text, cl
   useTimeout(clearErrors, 3500);
 
   return (
-    <SolidButton type={type} color={color} onClick={onClick} className={classes}>
+    <SolidButton type={type} color={color} onClick={onClick} className={className}>
       {content}
     </SolidButton>
   );
