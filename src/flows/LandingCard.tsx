@@ -10,7 +10,7 @@ export function LandingPage() {
   const { setPage } = useCardNav();
 
   return (
-    <div className="space-y-6 p-4 text-center">
+    <div className="max-w-full space-y-6 p-4 text-center">
       <div className="relative -mx-8 flex items-center justify-center">
         <Image src={BlueWave} alt="" className="absolute left-0 right-0 top-[0.5rem] rotate-6" />
         <Image width={110} height={110} src={SpaceCraft} alt="" className="z-[5] -rotate-[16deg]" />
@@ -29,7 +29,7 @@ export function LandingPage() {
           href={links.warpDocs}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-36 rounded-lg border-2 border-accent-500 px-3 py-2 text-accent-500 transition-all hover:border-accent-600 hover:text-accent-600 active:scale-95"
+          className="hover:color-accent-100 w-36 rounded-lg border-2 border-accent-500 px-3 py-2 text-accent-500 transition-all duration-200 ease-in-out hover:bg-accent-500 hover:text-white active:scale-95"
         >
           Learn more
         </a>

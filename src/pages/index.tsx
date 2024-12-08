@@ -5,7 +5,7 @@ import { CardFlow } from '../flows/CardFlow';
 
 const Home: NextPage = () => {
   return (
-    <div className="space-y-3 pt-4">
+    <div className="max-w-full space-y-3 pt-4">
       <div className="relative">
         <Card className="w-100 overflow-x-hidden sm:w-[31rem]">
           <CardFlow />
