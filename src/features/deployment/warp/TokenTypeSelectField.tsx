@@ -81,17 +81,21 @@ export function TokenTypeSelectField({
   return (
     <div className="flex-1 grow">
       <TokenTypeButton value={value} onClick={open} />
-      <Modal isOpen={isOpen} close={close} panelClassname="px-3 py-3 max-w-lg divide-y">
+      <Modal isOpen={isOpen} close={close} panelClassname="px-3 py-3 max-w-lg">
         <h2 className="px-2 pb-1.5 text-gray-600">Popular Token Types</h2>
-        {PopularTokenTypes.map((t, i) => (
-          <TokenTypeOption type={t} onClick={onClick} key={i} />
-        ))}
-        <h2 className="border-gray-100 px-2 py-2 text-gray-600">Other Token Types</h2>
-        {TokenTypes.map((t, i) =>
-          PopularTokenTypes.includes(t) ? null : (
+        <div className="divide-y">
+          {PopularTokenTypes.map((t, i) => (
             <TokenTypeOption type={t} onClick={onClick} key={i} />
-          ),
-        )}
+          ))}
+        </div>
+        <h2 className="border-gray-100 px-2 pb-2 pt-4 text-gray-600">Other Token Types</h2>
+        <div className="divide-y">
+          {TokenTypes.map((t, i) =>
+            PopularTokenTypes.includes(t) ? null : (
+              <TokenTypeOption type={t} onClick={onClick} key={i} />
+            ),
+          )}
+        </div>
       </Modal>
     </div>
   );
@@ -113,7 +117,7 @@ function TokenTypeOption({ type, onClick }: { type: TokenType; onClick: (t: Toke
   return (
     <Button
       onClick={() => onClick(type)}
-      className="flex w-full flex-col items-start gap-px rounded border-gray-100 px-2 py-1.5 text-left hover:bg-gray-100 hover:opacity-100"
+      className="flex w-full flex-col items-start gap-px rounded border-gray-100 px-2 py-1.5 text-left last-of-type:border-b-0 hover:bg-gray-100 hover:opacity-100"
     >
       <h3 className="text-sm text-primary-500">{TokenTypeDescriptions[type].label}</h3>
       <p className="text-xs text-gray-700">{TokenTypeDescriptions[type].description}</p>

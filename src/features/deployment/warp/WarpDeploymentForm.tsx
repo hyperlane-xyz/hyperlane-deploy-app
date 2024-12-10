@@ -2,14 +2,25 @@ import { arbitrum, ethereum } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   MultiProtocolProvider,
+  Token,
+  TOKEN_TYPE_TO_STANDARD,
+  TokenRouterConfig,
   TokenType,
   WarpRouteDeployConfigSchema,
 } from '@hyperlane-xyz/sdk';
-import { errorToString, isAddress, ProtocolType } from '@hyperlane-xyz/utils';
-import { AccountInfo, Button, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
+import { errorToString, isAddress, isNumeric, objMap, ProtocolType } from '@hyperlane-xyz/utils';
+import {
+  AccountInfo,
+  Button,
+  ErrorIcon,
+  IconButton,
+  useAccounts,
+  XIcon,
+} from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
 import Image from 'next/image';
 import { useMemo } from 'react';
+import { GrowAndFade, GrowAndFadeList } from '../../../components/animation/GrowAndFade';
 import { BackButton } from '../../../components/buttons/BackButton';
 import { ConnectAwareSubmitButton } from '../../../components/buttons/ConnectAwareSubmitButton';
 import { TextInput } from '../../../components/input/TextField';
@@ -26,7 +37,7 @@ import { ChainWalletWarning } from '../../chains/ChainWalletWarning';
 import { useMultiProvider } from '../../chains/hooks';
 import { TokenTypeSelectField } from './TokenTypeSelectField';
 import { WarpDeploymentConfigEntry, WarpDeploymentFormValues } from './types';
-import { isCollateralTokenType, isNativeTokenType } from './utils';
+import { isCollateralTokenType, isNativeTokenType, isSyntheticTokenType } from './utils';
 
 const initialValues: WarpDeploymentFormValues = {
   configs: [
@@ -62,11 +73,12 @@ export function WarpDeploymentForm() {
       validateOnBlur={false}
     >
       {() => (
-        <Form className="flex w-full flex-col items-stretch xs:min-w-100">
+        <Form className="flex w-full flex-col items-stretch xs:min-w-112">
           <WarningBanners />
           <div className="space-y-5">
             <HeaderSection />
             <ConfigListSection />
+            <ErrorSection />
             <ButtonSection />
           </div>
         </Form>
@@ -89,9 +101,11 @@ function ConfigListSection() {
 
   return (
     <div className="space-y-3">
-      {values.configs.map((config, index) => (
-        <ChainTokenConfig key={index} index={index} config={config} />
-      ))}
+      <GrowAndFadeList>
+        {values.configs.map((config, index) => (
+          <ChainTokenConfig key={index} index={index} config={config} />
+        ))}
+      </GrowAndFadeList>
       <AddConfigButton />
     </div>
   );
@@ -139,17 +153,14 @@ function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry
           }}
         />
       </div>
-      {/* TODO animate entry */}
-      {isCollateralized && (
-        <div>
-          <TextInput
-            value={config.tokenAddress}
-            onChange={(v) => onChange({ tokenAddress: v })}
-            placeholder="Token address (0x123...)"
-            className="w-full"
-          />
-        </div>
-      )}
+      <GrowAndFade isVisible={isCollateralized}>
+        <TextInput
+          value={config.tokenAddress}
+          onChange={(v) => onChange({ tokenAddress: v })}
+          placeholder="Token address (0x123...)"
+          className="w-full"
+        />
+      </GrowAndFade>
     </div>
   );
 }
@@ -178,17 +189,27 @@ function AddConfigButton() {
   );
 }
 
+function ErrorSection() {
+  const { errors } = useFormikContext<WarpDeploymentFormValues>();
+  const firstError = Object.keys(errors)[0];
+  const firstErrorLabel = isNumeric(firstError) ? `Chain ${parseInt(firstError) + 1}: ` : '';
+  return (
+    <GrowAndFade isVisible={!!firstError}>
+      <div className="flex items-center gap-2 rounded-lg bg-red-500/5 px-3 py-1.5">
+        <ErrorIcon width={16} height={16} color={Color.red['600']} />
+        <span className="text-xs text-red-600">{`${firstErrorLabel}${errors[firstError]}`}</span>
+      </div>
+    </GrowAndFade>
+  );
+}
+
 function ButtonSection() {
   const { values } = useFormikContext<WarpDeploymentFormValues>();
   const chains = useMemo(() => values.configs.map((c) => c.chainName), [values]);
   return (
     <div className="mt-4 flex items-center justify-between">
       <BackButton page={CardPage.Landing} />
-      <ConnectAwareSubmitButton<WarpDeploymentFormValues>
-        chains={chains}
-        text="Continue"
-        className="px-3 py-1.5"
-      />
+      <ConnectAwareSubmitButton chains={chains} text="Continue" className="px-3 py-1.5" />
     </div>
   );
 }
@@ -226,32 +247,53 @@ async function validateForm(
       return { form: 'At least two chains are required' };
     }
 
-    const warpRouteDeployConfig: ChainMap<Record<string, any>> = {};
+    let warpRouteDeployConfig: ChainMap<TokenRouterConfig> = {};
+    // TODO import TokenMetadata type from SDK when it's updated
+    let firstTokenMetadata: any;
     for (let i = 0; i < configs.length; i++) {
       const { chainName, tokenType, tokenAddress } = configs[i];
-      if (!chainName) return { i: 'Chain is required' };
-      if (!tokenType) return { i: 'Token type is required' };
+      if (!chainName) return { [i]: 'Chain is required' };
+      if (!tokenType) return { [i]: 'Token type is required' };
 
       // TODO import TokenMetadata type from SDK when it's updated
-      // let tokenMetadata: any
-
+      let tokenMetadata: any;
       if (isCollateralTokenType(tokenType)) {
-        if (!tokenAddress) return { i: 'Token address is required' };
-        if (!isAddress(tokenAddress)) return { i: 'Token address is invalid' };
-        // TODO fetch metadata from token address
+        if (!tokenAddress) return { [i]: 'Token address is required' };
+        if (!isAddress(tokenAddress)) return { [i]: 'Token address is invalid' };
+        const token = new Token({
+          standard: TOKEN_TYPE_TO_STANDARD[tokenType],
+          addressOrDenom: tokenAddress,
+          chainName,
+          // Placeholder values that won't be used
+          decimals: 1,
+          symbol: 'Unknown',
+          name: 'Unknown',
+        });
+        tokenMetadata = await token.getAdapter(multiProvider).getMetadata();
+      } else if (isNativeTokenType(tokenType)) {
+        const chainMetadata = multiProvider.getChainMetadata(chainName);
+        if (!chainMetadata.nativeToken) return { [i]: 'Native token metadata missing for chain' };
+        const token = Token.FromChainMetadataNativeToken(chainMetadata);
+        tokenMetadata = await token.getAdapter(multiProvider).getMetadata();
+      } else if (isSyntheticTokenType(tokenType)) {
+        // Synthetic tokens, no validation needed here yet
+      } else {
+        return { [i]: 'Invalid token type' };
       }
-      if (isNativeTokenType(tokenType)) {
-        const nativeTokenInfo = multiProvider.getChainMetadata(chainName).nativeToken;
-        if (!nativeTokenInfo) return { i: 'Native token metadata missing for chain' };
-        // TODO use metadata from token info
-      }
+      firstTokenMetadata ||= tokenMetadata;
 
       warpRouteDeployConfig[chainName] = {
         type: tokenType,
         token: tokenAddress,
-        // ...tokenMetadata
+        ...tokenMetadata,
       };
     }
+
+    // Second pass to add token metadata to synthetic tokens
+    warpRouteDeployConfig = objMap(warpRouteDeployConfig, (_, config) => {
+      if (isSyntheticTokenType(config.type)) return { ...config, ...firstTokenMetadata };
+      else return config;
+    });
 
     WarpRouteDeployConfigSchema.parse(warpRouteDeployConfig);
 

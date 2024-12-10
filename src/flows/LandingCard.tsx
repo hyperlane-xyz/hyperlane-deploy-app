@@ -29,7 +29,7 @@ export function LandingPage() {
           href={links.warpDocs}
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:color-accent-100 w-36 rounded-lg border-2 border-accent-500 px-3 py-2 text-accent-500 transition-all duration-200 ease-in-out hover:bg-accent-500 hover:text-white active:scale-95"
+          className="w-36 rounded-lg border-2 border-accent-500 px-3 py-2 text-accent-500 transition-all duration-500 hover:bg-accent-500 hover:text-white active:scale-95"
         >
           Learn more
         </a>

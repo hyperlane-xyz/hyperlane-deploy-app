@@ -27,3 +27,7 @@ export function isNativeTokenType(tokenType: TokenType) {
   // return NativeConfigSchema.shape.type.options.includes(tokenType as any);
   return nativeTokenTypes.includes(tokenType);
 }
+
+export function isSyntheticTokenType(tokenType: TokenType) {
+  return !isCollateralTokenType(tokenType) && !isNativeTokenType(tokenType);
+}

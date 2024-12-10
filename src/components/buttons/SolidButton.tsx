@@ -33,7 +33,7 @@ export function SolidButton(
     onHover = 'hover:bg-primary-600';
   } else if (color === 'accent') {
     baseColors = 'bg-accent-500 text-white';
-    onHover = 'hover:bg-accent-600';
+    onHover = 'hover:bg-accent-500/85';
   } else if (color === 'green') {
     baseColors = 'bg-green-500 text-white';
     onHover = 'hover:bg-green-600';
