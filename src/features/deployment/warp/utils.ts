@@ -1,7 +1,7 @@
 import { TokenType } from '@hyperlane-xyz/sdk';
 
 // TODO remove (see below)
-const collateralizedTokenTypes = [
+const collateralTokenTypes = [
   TokenType.collateral,
   TokenType.collateralVault,
   TokenType.collateralVaultRebase,
@@ -12,9 +12,18 @@ const collateralizedTokenTypes = [
   TokenType.collateralUri,
 ];
 
-export function isCollateralizedTokenType(tokenType: TokenType) {
+const nativeTokenTypes = [TokenType.native, TokenType.nativeScaled];
+
+export function isCollateralTokenType(tokenType: TokenType) {
   // TODO use this when SDK is updated
   // any cast required because the config schema has a narrowed type
   // return CollateralConfigSchema.shape.type.options.includes(tokenType as any);
-  return collateralizedTokenTypes.includes(tokenType);
+  return collateralTokenTypes.includes(tokenType);
+}
+
+export function isNativeTokenType(tokenType: TokenType) {
+  // TODO use this when SDK is updated
+  // any cast required because the config schema has a narrowed type
+  // return NativeConfigSchema.shape.type.options.includes(tokenType as any);
+  return nativeTokenTypes.includes(tokenType);
 }

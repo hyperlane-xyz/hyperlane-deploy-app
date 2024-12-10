@@ -1,6 +1,11 @@
 import { arbitrum, ethereum } from '@hyperlane-xyz/registry';
-import { TokenType } from '@hyperlane-xyz/sdk';
-import { errorToString, ProtocolType } from '@hyperlane-xyz/utils';
+import {
+  ChainMap,
+  MultiProtocolProvider,
+  TokenType,
+  WarpRouteDeployConfigSchema,
+} from '@hyperlane-xyz/sdk';
+import { errorToString, isAddress, ProtocolType } from '@hyperlane-xyz/utils';
 import { AccountInfo, Button, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
 import Image from 'next/image';
@@ -21,7 +26,7 @@ import { ChainWalletWarning } from '../../chains/ChainWalletWarning';
 import { useMultiProvider } from '../../chains/hooks';
 import { TokenTypeSelectField } from './TokenTypeSelectField';
 import { WarpDeploymentConfigEntry, WarpDeploymentFormValues } from './types';
-import { isCollateralizedTokenType } from './utils';
+import { isCollateralTokenType, isNativeTokenType } from './utils';
 
 const initialValues: WarpDeploymentFormValues = {
   configs: [
@@ -39,10 +44,10 @@ const initialValues: WarpDeploymentFormValues = {
 
 export function WarpDeploymentForm() {
   const multiProvider = useMultiProvider();
-
   const { accounts } = useAccounts(multiProvider, config.addressBlacklist);
 
-  const validate = (values: WarpDeploymentFormValues) => validateForm(values, accounts);
+  const validate = (values: WarpDeploymentFormValues) =>
+    validateForm(values, accounts, multiProvider);
 
   const onSubmitForm = (values: WarpDeploymentFormValues) => {
     logger.debug('Deployment form values', values);
@@ -96,7 +101,7 @@ function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry
   const { values, setValues } = useFormikContext<WarpDeploymentFormValues>();
 
   const isRemoveDisabled = values.configs.length <= 2;
-  const isCollateralized = isCollateralizedTokenType(config.tokenType);
+  const isCollateralized = isCollateralTokenType(config.tokenType);
 
   const onChange = (update: Partial<WarpDeploymentConfigEntry>) => {
     const configs = [...values.configs];
@@ -207,13 +212,52 @@ const insufficientFundsErrMsg = /insufficient.[funds|lamports]/i;
 const emptyAccountErrMsg = /AccountNotFound/i;
 
 async function validateForm(
-  values: WarpDeploymentFormValues,
+  { configs }: WarpDeploymentFormValues,
   _accounts: Record<ProtocolType, AccountInfo>,
+  multiProvider: MultiProtocolProvider,
 ) {
   try {
-    const { configs } = values;
-    // TODO
-    return configs.length >= 2;
+    const chainNames = configs.map((c) => c.chainName);
+    if (new Set(chainNames).size !== chainNames.length) {
+      return { form: 'Chains cannot be used more than once' };
+    }
+
+    if (chainNames.length < 2) {
+      return { form: 'At least two chains are required' };
+    }
+
+    const warpRouteDeployConfig: ChainMap<Record<string, any>> = {};
+    for (let i = 0; i < configs.length; i++) {
+      const { chainName, tokenType, tokenAddress } = configs[i];
+      if (!chainName) return { i: 'Chain is required' };
+      if (!tokenType) return { i: 'Token type is required' };
+
+      // TODO import TokenMetadata type from SDK when it's updated
+      // let tokenMetadata: any
+
+      if (isCollateralTokenType(tokenType)) {
+        if (!tokenAddress) return { i: 'Token address is required' };
+        if (!isAddress(tokenAddress)) return { i: 'Token address is invalid' };
+        // TODO fetch metadata from token address
+      }
+      if (isNativeTokenType(tokenType)) {
+        const nativeTokenInfo = multiProvider.getChainMetadata(chainName).nativeToken;
+        if (!nativeTokenInfo) return { i: 'Native token metadata missing for chain' };
+        // TODO use metadata from token info
+      }
+
+      warpRouteDeployConfig[chainName] = {
+        type: tokenType,
+        token: tokenAddress,
+        // ...tokenMetadata
+      };
+    }
+
+    WarpRouteDeployConfigSchema.parse(warpRouteDeployConfig);
+
+    // TODO check account balances for each chain
+
+    return {};
   } catch (error: any) {
     logger.error('Error validating form', error);
     let errorMsg = errorToString(error, 40);
