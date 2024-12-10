@@ -12,7 +12,7 @@ export function WalletFloatingButtons() {
   }));
 
   return (
-    <div className="absolute -top-8 right-2 hidden items-center gap-4 sm:flex">
+    <div className="absolute -top-8 right-2 flex items-center gap-4">
       <IconButton
         className={`p-0.5 ${styles.roundedCircle} `}
         title="History"

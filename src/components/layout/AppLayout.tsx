@@ -31,7 +31,9 @@ export function AppLayout({ children }: PropsWithChildren) {
       >
         <Header />
         <div className="mx-auto flex max-w-full grow items-center px-2 sm:px-4 lg:px-12">
-          <main className="my-4 flex w-full flex-1 items-center justify-center">{children}</main>
+          <main className="my-4 flex max-w-full flex-1 items-center justify-center">
+            {children}
+          </main>
         </div>
         <Footer />
       </div>

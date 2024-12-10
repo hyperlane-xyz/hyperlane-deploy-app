@@ -62,7 +62,7 @@ export function WarpDeploymentForm() {
       validateOnBlur={false}
     >
       {() => (
-        <Form className="flex w-full flex-col items-stretch">
+        <Form className="flex w-full flex-col items-stretch xs:min-w-100">
           <WarningBanners />
           <div className="space-y-5">
             <HeaderSection />
@@ -77,7 +77,7 @@ export function WarpDeploymentForm() {
 
 function HeaderSection() {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-10">
       <H1>Configure Warp Route</H1>
       <Stepper numSteps={5} currentStep={2} />
     </div>

@@ -5,13 +5,11 @@ import { CardFlow } from '../flows/CardFlow';
 
 const Home: NextPage = () => {
   return (
-    <div className="max-w-full space-y-3 pt-4">
-      <div className="relative">
-        <Card className="w-100 overflow-x-hidden sm:w-[31rem]">
-          <CardFlow />
-        </Card>
-        <WalletFloatingButtons />
-      </div>
+    <div className="relative max-w-full space-y-3 pt-4">
+      <Card className="overflow-x-hidden sm:max-w-screen-xs">
+        <CardFlow />
+      </Card>
+      <WalletFloatingButtons />
     </div>
   );
 };
