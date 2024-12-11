@@ -1,22 +1,8 @@
 import { arbitrum, ethereum } from '@hyperlane-xyz/registry';
-import {
-  ChainMap,
-  MultiProtocolProvider,
-  Token,
-  TOKEN_TYPE_TO_STANDARD,
-  TokenRouterConfig,
-  TokenType,
-  WarpRouteDeployConfigSchema,
-} from '@hyperlane-xyz/sdk';
-import { errorToString, isAddress, isNumeric, objMap, ProtocolType } from '@hyperlane-xyz/utils';
-import {
-  AccountInfo,
-  Button,
-  ErrorIcon,
-  IconButton,
-  useAccounts,
-  XIcon,
-} from '@hyperlane-xyz/widgets';
+import { TokenType } from '@hyperlane-xyz/sdk';
+import { isNumeric } from '@hyperlane-xyz/utils';
+import { Button, ErrorIcon, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
 import { Form, Formik, useFormikContext } from 'formik';
 import Image from 'next/image';
 import { useMemo } from 'react';
@@ -37,7 +23,8 @@ import { ChainWalletWarning } from '../../chains/ChainWalletWarning';
 import { useMultiProvider } from '../../chains/hooks';
 import { TokenTypeSelectField } from './TokenTypeSelectField';
 import { WarpDeploymentConfigEntry, WarpDeploymentFormValues } from './types';
-import { isCollateralTokenType, isNativeTokenType, isSyntheticTokenType } from './utils';
+import { isCollateralTokenType } from './utils';
+import { validateWarpDeploymentForm } from './validation';
 
 const initialValues: WarpDeploymentFormValues = {
   configs: [
@@ -58,7 +45,7 @@ export function WarpDeploymentForm() {
   const { accounts } = useAccounts(multiProvider, config.addressBlacklist);
 
   const validate = (values: WarpDeploymentFormValues) =>
-    validateForm(values, accounts, multiProvider);
+    validateWarpDeploymentForm(values, accounts, multiProvider);
 
   const onSubmitForm = (values: WarpDeploymentFormValues) => {
     logger.debug('Deployment form values', values);
@@ -78,7 +65,6 @@ export function WarpDeploymentForm() {
           <div className="space-y-5">
             <HeaderSection />
             <ConfigListSection />
-            <ErrorSection />
             <ButtonSection />
           </div>
         </Form>
@@ -107,21 +93,24 @@ function ConfigListSection() {
         ))}
       </GrowAndFadeList>
       <AddConfigButton />
+      <FormErrors />
     </div>
   );
 }
 
 function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry; index: number }) {
-  const { values, setValues } = useFormikContext<WarpDeploymentFormValues>();
+  const { values, setValues, errors, setErrors } = useFormikContext<WarpDeploymentFormValues>();
 
   const isRemoveDisabled = values.configs.length <= 2;
   const isCollateralized = isCollateralTokenType(config.tokenType);
+  const hasError = !!errors[index];
 
   const onChange = (update: Partial<WarpDeploymentConfigEntry>) => {
     const configs = [...values.configs];
     const updatedConfig = { ...configs[index], ...update };
     configs[index] = updatedConfig;
     setValues({ configs: configs });
+    setErrors({ ...errors, [index]: undefined });
   };
 
   const onRemove = () => {
@@ -129,10 +118,16 @@ function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry
     const configs = [...values.configs];
     configs.splice(index, 1);
     setValues({ configs: configs });
+    setErrors({ ...errors, [index]: undefined });
   };
 
   return (
-    <div className="space-y-1.5 rounded-lg bg-blue-500/5 px-3 pb-3 pt-2">
+    <div
+      className={clsx(
+        'space-y-1.5 rounded-lg px-3 pb-3 pt-2',
+        hasError ? 'bg-red-500/5' : 'bg-blue-500/5',
+      )}
+    >
       <div className="flex justify-between">
         <h3 className="pl-1 text-xs text-gray-700">{`Chain ${index + 1}`}</h3>
         <IconButton title="Remove" onClick={onRemove} disabled={isRemoveDisabled}>
@@ -189,15 +184,22 @@ function AddConfigButton() {
   );
 }
 
-function ErrorSection() {
+function FormErrors() {
   const { errors } = useFormikContext<WarpDeploymentFormValues>();
-  const firstError = Object.keys(errors)[0];
-  const firstErrorLabel = isNumeric(firstError) ? `Chain ${parseInt(firstError) + 1}: ` : '';
+
+  const errorData = Object.entries(errors).map(([key, message]) => ({
+    label: isNumeric(key) ? `Chain ${parseInt(key) + 1}: ` : '',
+    message,
+  }));
   return (
-    <GrowAndFade isVisible={!!firstError}>
-      <div className="flex items-center gap-2 rounded-lg bg-red-500/5 px-3 py-1.5">
-        <ErrorIcon width={16} height={16} color={Color.red['600']} />
-        <span className="text-xs text-red-600">{`${firstErrorLabel}${errors[firstError]}`}</span>
+    <GrowAndFade isVisible={errorData.length > 0}>
+      <div className="rounded-lg bg-red-500/5">
+        {errorData.map(({ label, message }) => (
+          <div key={label} className="flex items-center gap-2 px-3 py-1.5">
+            <ErrorIcon width={14} height={14} color={Color.red['600']} />
+            <span className="text-xs text-red-600">{`${label}${message}`}</span>
+          </div>
+        ))}
       </div>
     </GrowAndFade>
   );
@@ -227,86 +229,4 @@ function WarningBanners() {
       />
     </div>
   );
-}
-
-const insufficientFundsErrMsg = /insufficient.[funds|lamports]/i;
-const emptyAccountErrMsg = /AccountNotFound/i;
-
-async function validateForm(
-  { configs }: WarpDeploymentFormValues,
-  _accounts: Record<ProtocolType, AccountInfo>,
-  multiProvider: MultiProtocolProvider,
-) {
-  try {
-    const chainNames = configs.map((c) => c.chainName);
-    if (new Set(chainNames).size !== chainNames.length) {
-      return { form: 'Chains cannot be used more than once' };
-    }
-
-    if (chainNames.length < 2) {
-      return { form: 'At least two chains are required' };
-    }
-
-    let warpRouteDeployConfig: ChainMap<TokenRouterConfig> = {};
-    // TODO import TokenMetadata type from SDK when it's updated
-    let firstTokenMetadata: any;
-    for (let i = 0; i < configs.length; i++) {
-      const { chainName, tokenType, tokenAddress } = configs[i];
-      if (!chainName) return { [i]: 'Chain is required' };
-      if (!tokenType) return { [i]: 'Token type is required' };
-
-      // TODO import TokenMetadata type from SDK when it's updated
-      let tokenMetadata: any;
-      if (isCollateralTokenType(tokenType)) {
-        if (!tokenAddress) return { [i]: 'Token address is required' };
-        if (!isAddress(tokenAddress)) return { [i]: 'Token address is invalid' };
-        const token = new Token({
-          standard: TOKEN_TYPE_TO_STANDARD[tokenType],
-          addressOrDenom: tokenAddress,
-          chainName,
-          // Placeholder values that won't be used
-          decimals: 1,
-          symbol: 'Unknown',
-          name: 'Unknown',
-        });
-        tokenMetadata = await token.getAdapter(multiProvider).getMetadata();
-      } else if (isNativeTokenType(tokenType)) {
-        const chainMetadata = multiProvider.getChainMetadata(chainName);
-        if (!chainMetadata.nativeToken) return { [i]: 'Native token metadata missing for chain' };
-        const token = Token.FromChainMetadataNativeToken(chainMetadata);
-        tokenMetadata = await token.getAdapter(multiProvider).getMetadata();
-      } else if (isSyntheticTokenType(tokenType)) {
-        // Synthetic tokens, no validation needed here yet
-      } else {
-        return { [i]: 'Invalid token type' };
-      }
-      firstTokenMetadata ||= tokenMetadata;
-
-      warpRouteDeployConfig[chainName] = {
-        type: tokenType,
-        token: tokenAddress,
-        ...tokenMetadata,
-      };
-    }
-
-    // Second pass to add token metadata to synthetic tokens
-    warpRouteDeployConfig = objMap(warpRouteDeployConfig, (_, config) => {
-      if (isSyntheticTokenType(config.type)) return { ...config, ...firstTokenMetadata };
-      else return config;
-    });
-
-    WarpRouteDeployConfigSchema.parse(warpRouteDeployConfig);
-
-    // TODO check account balances for each chain
-
-    return {};
-  } catch (error: any) {
-    logger.error('Error validating form', error);
-    let errorMsg = errorToString(error, 40);
-    const fullError = `${errorMsg} ${error.message}`;
-    if (insufficientFundsErrMsg.test(fullError) || emptyAccountErrMsg.test(fullError)) {
-      errorMsg = 'Insufficient funds for gas fees';
-    }
-    return { form: errorMsg };
-  }
 }
