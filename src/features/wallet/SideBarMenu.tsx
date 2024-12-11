@@ -26,20 +26,20 @@ export function SideBarMenu({
 
   const multiProvider = useMultiProvider();
 
-  const { deployments, resetDeployments, deploymentLoading } = useStore((s) => ({
+  const { deployments, resetDeployments, isDeploymentLoading } = useStore((s) => ({
     deployments: s.deployments,
     resetDeployments: s.resetDeployments,
-    deploymentLoading: s.deploymentLoading,
+    isDeploymentLoading: s.isDeploymentLoading,
   }));
 
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
-    } else if (deploymentLoading) {
+    } else if (isDeploymentLoading) {
       setSelectedDeployment(deployments[deployments.length - 1]);
       setIsModalOpen(true);
     }
-  }, [deployments, deploymentLoading]);
+  }, [deployments, isDeploymentLoading]);
 
   useEffect(() => {
     setIsMenuOpen(isOpen);

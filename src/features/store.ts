@@ -8,7 +8,12 @@ import { config } from '../consts/config';
 import { CardPage } from '../flows/CardPage';
 import { logger } from '../utils/logger';
 import { assembleChainMetadata } from './chains/metadata';
-import { DeploymentContext, DeploymentStatus, FinalDeploymentStatuses } from './deployment/types';
+import {
+  DeploymentConfig,
+  DeploymentContext,
+  DeploymentStatus,
+  FinalDeploymentStatuses,
+} from './deployment/types';
 
 // Increment this when persist state has breaking changes
 const PERSIST_STATE_VERSION = 0;
@@ -39,10 +44,15 @@ export interface AppState {
   cardPage: CardPage;
   direction: 'forward' | 'backward';
   setCardPage: (page: CardPage) => void;
-  deploymentLoading: boolean;
-  setDeploymentLoading: (isLoading: boolean) => void;
+
+  deploymentConfig: DeploymentConfig | undefined;
+  setDeploymentConfig: (config: DeploymentConfig | undefined) => void;
+  isDeploymentLoading: boolean;
+  setIsDeploymentLoading: (isLoading: boolean) => void;
+
   isSideBarOpen: boolean;
   setIsSideBarOpen: (isOpen: boolean) => void;
+
   showEnvSelectModal: boolean;
   setShowEnvSelectModal: (show: boolean) => void;
 }
@@ -107,14 +117,21 @@ export const useStore = create<AppState>()(
       setCardPage: (page) => {
         set((s) => ({ cardPage: page, direction: page >= s.cardPage ? 'forward' : 'backward' }));
       },
-      deploymentLoading: false,
-      setDeploymentLoading: (isLoading) => {
-        set(() => ({ deploymentLoading: isLoading }));
+
+      deploymentConfig: undefined,
+      setDeploymentConfig: (config: DeploymentConfig | undefined) => {
+        set(() => ({ deploymentConfig: config }));
       },
+      isDeploymentLoading: false,
+      setIsDeploymentLoading: (isLoading) => {
+        set(() => ({ isDeploymentLoading: isLoading }));
+      },
+
       isSideBarOpen: false,
       setIsSideBarOpen: (isSideBarOpen) => {
         set(() => ({ isSideBarOpen }));
       },
+
       showEnvSelectModal: false,
       setShowEnvSelectModal: (showEnvSelectModal) => {
         set(() => ({ showEnvSelectModal }));

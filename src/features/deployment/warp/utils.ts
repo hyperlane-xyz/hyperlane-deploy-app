@@ -5,7 +5,7 @@ import {
   TokenType,
 } from '@hyperlane-xyz/sdk';
 import { assert } from '@hyperlane-xyz/utils';
-import { WarpDeploymentConfigEntry } from './types';
+import { WarpDeploymentConfigItem } from './types';
 
 // TODO remove (see below)
 const collateralTokenTypes = [
@@ -39,9 +39,9 @@ export function isSyntheticTokenType(tokenType: TokenType) {
   return !isCollateralTokenType(tokenType) && !isNativeTokenType(tokenType);
 }
 
-// TODO use meta type when SDK is updated
-export function formConfigToDeployConfig(
-  config: WarpDeploymentConfigEntry,
+export function formItemToDeployConfig(
+  config: WarpDeploymentConfigItem,
+  // TODO use meta type when SDK is updated
   tokenMetadata: any,
 ): TokenRouterConfig {
   const { tokenType, tokenAddress } = config;
@@ -52,8 +52,9 @@ export function formConfigToDeployConfig(
   };
 }
 
+// Consider caching results here for faster form validation
 export function getTokenMetadata(
-  config: WarpDeploymentConfigEntry,
+  config: WarpDeploymentConfigItem,
   multiProvider: MultiProtocolProvider,
   // TODO add type when SDK is updated
 ) {

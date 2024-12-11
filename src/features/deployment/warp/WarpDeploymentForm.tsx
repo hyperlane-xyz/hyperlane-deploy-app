@@ -1,5 +1,5 @@
 import { arbitrum, ethereum } from '@hyperlane-xyz/registry';
-import { TokenType } from '@hyperlane-xyz/sdk';
+import { TokenType, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 import { isNumeric } from '@hyperlane-xyz/utils';
 import { Button, ErrorIcon, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
@@ -13,6 +13,7 @@ import { TextInput } from '../../../components/input/TextField';
 import { H1 } from '../../../components/text/H1';
 import { config } from '../../../consts/config';
 import { CardPage } from '../../../flows/CardPage';
+import { useCardNav } from '../../../flows/hooks';
 import { Stepper } from '../../../flows/Stepper';
 import PlusCircleIcon from '../../../images/icons/plus-circle.svg';
 import { Color } from '../../../styles/Color';
@@ -21,8 +22,10 @@ import { ChainConnectionWarning } from '../../chains/ChainConnectionWarning';
 import { ChainSelectField } from '../../chains/ChainSelectField';
 import { ChainWalletWarning } from '../../chains/ChainWalletWarning';
 import { useMultiProvider } from '../../chains/hooks';
+import { useStore } from '../../store';
+import { DeploymentType } from '../types';
 import { TokenTypeSelectField } from './TokenTypeSelectField';
-import { WarpDeploymentConfigEntry, WarpDeploymentFormValues } from './types';
+import { WarpDeploymentConfigItem, WarpDeploymentFormValues } from './types';
 import { isCollateralTokenType } from './utils';
 import { validateWarpDeploymentForm } from './validation';
 
@@ -44,11 +47,25 @@ export function WarpDeploymentForm() {
   const multiProvider = useMultiProvider();
   const { accounts } = useAccounts(multiProvider, config.addressBlacklist);
 
-  const validate = (values: WarpDeploymentFormValues) =>
-    validateWarpDeploymentForm(values, accounts, multiProvider);
+  // Gets set in the validate method
+  let warpDeployConfig: WarpRouteDeployConfig | undefined = undefined;
+  const setWarpDeployConfig = (c: WarpRouteDeployConfig) => {
+    warpDeployConfig = c;
+  };
 
-  const onSubmitForm = (values: WarpDeploymentFormValues) => {
-    logger.debug('Deployment form values', values);
+  const validate = (values: WarpDeploymentFormValues) =>
+    validateWarpDeploymentForm(values, accounts, multiProvider, setWarpDeployConfig);
+
+  const { setPage } = useCardNav();
+  const { setDeploymentConfig } = useStore((s) => ({ setDeploymentConfig: s.setDeploymentConfig }));
+
+  const onSubmitForm = () => {
+    if (!warpDeployConfig) {
+      logger.warn('Warp deploy config is undefined, should have been set during validation');
+      return;
+    }
+    setDeploymentConfig({ type: DeploymentType.Warp, config: warpDeployConfig });
+    setPage(CardPage.WarpReview);
   };
 
   return (
@@ -98,14 +115,14 @@ function ConfigListSection() {
   );
 }
 
-function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigEntry; index: number }) {
+function ChainTokenConfig({ config, index }: { config: WarpDeploymentConfigItem; index: number }) {
   const { values, setValues, errors, setErrors } = useFormikContext<WarpDeploymentFormValues>();
 
   const isRemoveDisabled = values.configs.length <= 2;
   const isCollateralized = isCollateralTokenType(config.tokenType);
   const hasError = !!errors[index];
 
-  const onChange = (update: Partial<WarpDeploymentConfigEntry>) => {
+  const onChange = (update: Partial<WarpDeploymentConfigItem>) => {
     const configs = [...values.configs];
     const updatedConfig = { ...configs[index], ...update };
     configs[index] = updatedConfig;

@@ -1,3 +1,5 @@
+import { WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
+
 export enum DeploymentStatus {
   Preparing = 'preparing',
   CreatingTxs = 'creating-txs',
@@ -26,3 +28,26 @@ export interface DeploymentContext {
   destination: ChainName;
   timestamp: number;
 }
+
+export enum DeploymentType {
+  Warp = 'warp',
+  Core = 'core',
+  // Add more here as needed
+}
+
+interface ConfigBase {
+  type: DeploymentType;
+  config: unknown;
+}
+
+export interface WarpDeploymentConfig extends ConfigBase {
+  type: DeploymentType.Warp;
+  config: WarpRouteDeployConfig;
+}
+
+export interface CoreDeploymentConfig extends ConfigBase {
+  type: DeploymentType.Core;
+  config: any; // TODO
+}
+
+export type DeploymentConfig = WarpDeploymentConfig | CoreDeploymentConfig;
