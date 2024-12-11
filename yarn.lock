@@ -3933,6 +3933,7 @@ __metadata:
     yaml: "npm:^2.6.0"
     yaml-loader: "npm:^0.8.1"
     zod: "npm:3.21.4"
+    zod-validation-error: "npm:^3.4.0"
     zustand: "npm:^4.4.7"
   languageName: unknown
   linkType: soft
@@ -23465,6 +23466,15 @@ __metadata:
   peerDependencies:
     ethers: ^5.7.0
   checksum: 10/a1566a2a2ba34a3026680f3b4000ffa02593e02d9c73a4dd143bde929b5e39b09544d429bccad0479070670cfdad5f6836cb686c4b8d7954b4d930826be91c92
+  languageName: node
+  linkType: hard
+
+"zod-validation-error@npm:^3.4.0":
+  version: 3.4.0
+  resolution: "zod-validation-error@npm:3.4.0"
+  peerDependencies:
+    zod: ^3.18.0
+  checksum: 10/b98b1bbba14a3bb31649a1566c8c5a5213ec70dcaa2cbb1e89db00d56648a446225b35a8f6768471730d7013f4f141cd70c2b9740d69e6433ebfa148aecdac2f
   languageName: node
   linkType: hard
 

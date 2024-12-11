@@ -1,7 +1,9 @@
 import { ProtocolType } from '@hyperlane-xyz/utils';
-import { useAccounts, useConnectFns } from '@hyperlane-xyz/widgets';
+import { SpinnerIcon, useAccounts, useConnectFns } from '@hyperlane-xyz/widgets';
+import { useFormikContext } from 'formik';
 import { useMemo } from 'react';
 import { useMultiProvider } from '../../features/chains/hooks';
+import { Color } from '../../styles/Color';
 import { SolidButton } from './SolidButton';
 
 interface Props {
@@ -11,6 +13,8 @@ interface Props {
 }
 
 export function ConnectAwareSubmitButton({ chains, text, className }: Props) {
+  const { isValidating } = useFormikContext();
+
   const multiProvider = useMultiProvider();
   const { accounts } = useAccounts(multiProvider);
   const connectFns = useConnectFns();
@@ -25,7 +29,9 @@ export function ConnectAwareSubmitButton({ chains, text, className }: Props) {
   const onClick = isAccountsReady ? undefined : connectFns[unconnectedProtocols[0]];
 
   let content;
-  if (isAccountsReady) content = text;
+  if (isValidating)
+    content = <SpinnerIcon width={20} height={20} color={Color.white} className="mx-6" />;
+  else if (isAccountsReady) content = text;
   else content = `Connect wallet${unconnectedProtocols.length > 1 ? 's' : ''}`;
 
   return (

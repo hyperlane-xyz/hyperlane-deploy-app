@@ -187,16 +187,19 @@ function AddConfigButton() {
 function FormErrors() {
   const { errors } = useFormikContext<WarpDeploymentFormValues>();
 
-  const errorData = Object.entries(errors).map(([key, message]) => ({
-    label: isNumeric(key) ? `Chain ${parseInt(key) + 1}: ` : '',
-    message,
-  }));
+  const errorData = Object.entries(errors)
+    .filter(([_, message]) => !!message)
+    .map(([key, message]) => ({
+      label: isNumeric(key) ? `Chain ${parseInt(key) + 1}: ` : '',
+      message,
+    }));
+
   return (
     <GrowAndFade isVisible={errorData.length > 0}>
       <div className="rounded-lg bg-red-500/5">
         {errorData.map(({ label, message }) => (
           <div key={label} className="flex items-center gap-2 px-3 py-1.5">
-            <ErrorIcon width={14} height={14} color={Color.red['600']} />
+            <ErrorIcon width={14} height={14} color={Color.red['600']} className="shrink-0" />
             <span className="text-xs text-red-600">{`${label}${message}`}</span>
           </div>
         ))}

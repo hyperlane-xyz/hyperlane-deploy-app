@@ -1,7 +1,6 @@
 import {
+  EvmTokenAdapter,
   MultiProtocolProvider,
-  Token,
-  TOKEN_TYPE_TO_STANDARD,
   TokenRouterConfig,
   TokenType,
 } from '@hyperlane-xyz/sdk';
@@ -56,25 +55,19 @@ export function formConfigToDeployConfig(
 export function getTokenMetadata(
   config: WarpDeploymentConfigEntry,
   multiProvider: MultiProtocolProvider,
+  // TODO add type when SDK is updated
 ) {
   const { chainName, tokenType, tokenAddress } = config;
   if (isCollateralTokenType(tokenType)) {
     assert(tokenAddress, 'Collateral token address is required');
-    const token = new Token({
-      standard: TOKEN_TYPE_TO_STANDARD[tokenType],
-      addressOrDenom: tokenAddress,
-      chainName,
-      // Placeholder values that won't be used
-      decimals: 1,
-      symbol: 'Unknown',
-      name: 'Unknown',
+    const adapter = new EvmTokenAdapter(chainName, multiProvider, {
+      token: tokenAddress,
     });
-    return token.getAdapter(multiProvider).getMetadata();
+    return adapter.getMetadata();
   } else if (isNativeTokenType(tokenType)) {
     const chainMetadata = multiProvider.getChainMetadata(chainName);
     assert(chainMetadata.nativeToken, 'Native token metadata missing for chain');
-    const token = Token.FromChainMetadataNativeToken(chainMetadata);
-    return token.getAdapter(multiProvider).getMetadata();
+    return chainMetadata.nativeToken;
   } else {
     return undefined;
   }

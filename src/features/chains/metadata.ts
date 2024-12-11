@@ -1,4 +1,8 @@
-import { IRegistry, chainMetadata as publishedChainMetadata } from '@hyperlane-xyz/registry';
+import {
+  chainAddresses,
+  IRegistry,
+  chainMetadata as publishedChainMetadata,
+} from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   ChainMetadata,
@@ -54,6 +58,15 @@ export async function assembleChainMetadata(
   );
 
   const chainMetadata = mergeChainMetadataMap(evmRegistryChainMetadata, filesystemMetadata);
+
+  // Filter to only chains for which there are core deployment artifacts in the registry
+  // May want to revisit this later but it would require a way for users to provide these addresses
+  const chainsWithMailboxes = objFilter(
+    chainMetadata,
+    (c, m): m is ChainMetadata => !!chainAddresses[c]?.mailbox,
+  );
+
   const chainMetadataWithOverrides = mergeChainMetadataMap(chainMetadata, storeMetadataOverrides);
-  return { chainMetadata, chainMetadataWithOverrides };
+
+  return { chainMetadata: chainsWithMailboxes, chainMetadataWithOverrides };
 }

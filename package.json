@@ -48,6 +48,7 @@
     "viem": "^2.21.41",
     "wagmi": "^2.12.26",
     "zod": "3.21.4",
+    "zod-validation-error": "^3.4.0",
     "zustand": "^4.4.7"
   },
   "devDependencies": {

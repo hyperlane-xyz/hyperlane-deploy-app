@@ -1,7 +1,7 @@
+import { chainAddresses } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   MultiProtocolProvider,
-  TokenConfigSchema,
   TokenRouterConfig,
   WarpRouteDeployConfigSchema,
 } from '@hyperlane-xyz/sdk';
@@ -15,8 +15,9 @@ import {
   Result,
   success,
 } from '@hyperlane-xyz/utils';
-import { AccountInfo } from '@hyperlane-xyz/widgets';
+import { AccountInfo, getAccountAddressForChain } from '@hyperlane-xyz/widgets';
 import { logger } from '../../../utils/logger';
+import { zodErrorToString } from '../../../utils/zod';
 import { WarpDeploymentConfigEntry, WarpDeploymentFormValues } from './types';
 import {
   formConfigToDeployConfig,
@@ -31,7 +32,7 @@ const emptyAccountErrMsg = /AccountNotFound/i;
 
 export async function validateWarpDeploymentForm(
   { configs }: WarpDeploymentFormValues,
-  _accounts: Record<ProtocolType, AccountInfo>,
+  accounts: Record<ProtocolType, AccountInfo>,
   multiProvider: MultiProtocolProvider,
 ): Promise<Record<string | number, string>> {
   try {
@@ -58,7 +59,13 @@ export async function validateWarpDeploymentForm(
 
     let warpRouteDeployConfig: ChainMap<TokenRouterConfig> = configs.reduce(
       (acc, currentConfig, index) => {
-        acc[currentConfig.chainName] = deployConfigs[index];
+        const chainName = currentConfig.chainName;
+        const owner = getAccountAddressForChain(multiProvider, chainName, accounts);
+        acc[chainName] = {
+          ...deployConfigs[index],
+          mailbox: chainAddresses[chainName].mailbox,
+          owner,
+        };
         return acc;
       },
       {},
@@ -81,8 +88,9 @@ export async function validateWarpDeploymentForm(
     const combinedConfigValidationResult =
       WarpRouteDeployConfigSchema.safeParse(warpRouteDeployConfig);
 
-    if (!combinedConfigValidationResult.success)
-      return { form: combinedConfigValidationResult.error.message };
+    if (!combinedConfigValidationResult.success) {
+      return { form: zodErrorToString(combinedConfigValidationResult.error) };
+    }
 
     // TODO check account balances for each chain
 
@@ -123,9 +131,5 @@ async function validateChainTokenConfig(
     return failure('Address is not a valid token contract');
   }
 
-  const deployConfig = formConfigToDeployConfig(config, tokenMetadata);
-  const configResult = TokenConfigSchema.safeParse(deployConfig);
-  if (!configResult.success) return failure(configResult.error.message);
-
-  return success(deployConfig);
+  return success(formConfigToDeployConfig(config, tokenMetadata));
 }
