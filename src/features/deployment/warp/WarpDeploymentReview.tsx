@@ -1,3 +1,4 @@
+import { WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
 import { fromWeiRounded, isAddress, objLength } from '@hyperlane-xyz/utils';
 import { IconButton, PencilIcon, tryClipboardSet } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
@@ -184,8 +185,15 @@ function InfoSection() {
 }
 
 function ButtonSection() {
+  const { deploymentConfig } = useWarpDeploymentConfig();
   const { setPage } = useCardNav();
   const onClickContinue = () => {
+    // Re-validate config before proceeding in case edits broke something
+    const result = WarpRouteDeployConfigSchema.safeParse(deploymentConfig?.config);
+    if (!result.success) {
+      toast.error('Invalid config, please fix before deploying');
+      return;
+    }
     setPage(CardPage.WarpDeploy);
   };
 
