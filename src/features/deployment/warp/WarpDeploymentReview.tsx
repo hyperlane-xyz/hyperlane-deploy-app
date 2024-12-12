@@ -1,36 +1,34 @@
-import { MultiProtocolProvider, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
-import { objLength } from '@hyperlane-xyz/utils';
+import { fromWeiRounded, isAddress, objLength } from '@hyperlane-xyz/utils';
+import { IconButton, PencilIcon, tryClipboardSet } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
+import { toast } from 'react-toastify';
+import { stringify } from 'yaml';
 import { BackButton } from '../../../components/buttons/BackButton';
 import { SolidButton } from '../../../components/buttons/SolidButton';
+import { A } from '../../../components/text/A';
 import { H1 } from '../../../components/text/H1';
+import { links } from '../../../consts/links';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
 import { Stepper } from '../../../flows/Stepper';
 import RocketIcon from '../../../images/icons/rocket.svg';
+import { Color } from '../../../styles/Color';
 import { useMultiProvider } from '../../chains/hooks';
-import { useStore } from '../../store';
-import { DeploymentType, WarpDeploymentConfig } from '../types';
-// TODO move to widgets lib
-import { tryClipboardSet } from '@hyperlane-xyz/widgets';
-import { toast } from 'react-toastify';
-import { stringify } from 'yaml';
-import { A } from '../../../components/text/A';
-import { links } from '../../../consts/links';
-import InfoCircle from '../../../images/icons/info-circle.svg';
 import { getChainDisplayName } from '../../chains/utils';
+import { useWarpDeploymentConfig } from '../hooks';
 import { TokenTypeDescriptions } from './TokenTypeSelectField';
+import { isSyntheticTokenType } from './utils';
+
+// TODO move to widgets lib
+import InfoCircle from '../../../images/icons/info-circle.svg';
 
 export function WarpDeploymentReview() {
-  const { deploymentConfig } = useStore((s) => ({ deploymentConfig: s.deploymentConfig }));
-  if (!deploymentConfig || deploymentConfig.type !== DeploymentType.Warp) return null;
-
   return (
-    <div className="flex w-full flex-col items-stretch xs:min-w-112 sm:min-w-128">
+    <div className="flex w-full flex-col items-stretch sm:max-w-128">
       <div className="space-y-5">
         <HeaderSection />
-        <ConfigSection deploymentConfig={deploymentConfig} />
-        <InfoSection deploymentConfig={deploymentConfig} />
+        <ConfigSection />
+        <InfoSection />
         <ButtonSection />
       </div>
     </div>
@@ -46,73 +44,119 @@ function HeaderSection() {
   );
 }
 
-function ConfigSection({ deploymentConfig }: { deploymentConfig: WarpDeploymentConfig }) {
-  const multiProvider = useMultiProvider();
+function ConfigSection() {
+  const { deploymentConfig } = useWarpDeploymentConfig();
+  const chains = deploymentConfig?.chains || [];
 
-  const { chains, config } = deploymentConfig;
   return (
     <div className="space-y-3">
       {chains.map((c, i) => (
-        <ConfigItem key={c} chain={c} index={i} warpConfig={config} multiProvider={multiProvider} />
+        <ConfigItem key={c} chain={c} index={i} />
       ))}
     </div>
   );
 }
 
-function ConfigItem({
-  chain,
-  index,
-  warpConfig,
-  multiProvider,
-}: {
-  chain: ChainName;
-  index: number;
-  warpConfig: WarpRouteDeployConfig;
-  multiProvider: MultiProtocolProvider;
-}) {
-  const config = warpConfig[chain];
-  const numConfigs = objLength(warpConfig);
+function ConfigItem({ chain, index }: { chain: ChainName; index: number }) {
+  const multiProvider = useMultiProvider();
+  const { deploymentConfig, setDeploymentConfig } = useWarpDeploymentConfig();
+  if (!deploymentConfig) return null;
+
+  const numConfigs = objLength(deploymentConfig.config);
+  const chainConfig = deploymentConfig.config[chain];
+  const { name, symbol, decimals, totalSupply, type, owner } = chainConfig;
+  // Cast here to workaround cumbersome discriminated union with many different cases
+  const tokenAddress = (chainConfig as any).token;
+  const isSynthetic = isSyntheticTokenType(type);
 
   const chainDisplay = getChainDisplayName(multiProvider, chain, true);
-  const typeDisplay = TokenTypeDescriptions[config.type].label;
+  const typeDisplay = TokenTypeDescriptions[type].label;
+  const supplyDisplay = totalSupply ? fromWeiRounded(totalSupply, decimals, 0) : 'Infinite';
 
-  // Cast here to workaround cumbersome discriminated union with many different cases
-  const tokenAddress = (config as any).token;
+  const onChangeValue = (key: string, value: string) => {
+    const newChainConfig = { ...chainConfig, [key]: value };
+    const newCombinedConfig = { ...deploymentConfig.config, [chain]: newChainConfig };
+    setDeploymentConfig({ ...deploymentConfig, config: newCombinedConfig });
+  };
 
   return (
-    <div className="space-y-1.5 rounded-lg bg-blue-500/5 px-3 py-2">
+    <div className="space-y-2 rounded-lg bg-blue-500/5 px-3 py-2">
       <h3 className="text-xs font-medium text-gray-700">{`Chain ${index + 1} / ${numConfigs}`}</h3>
       <div className="grid grid-cols-2 gap-x-16">
-        <div className="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-1.5">
+        <div className="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-2">
           <ConfigLabelAndValue label="Chain" value={chainDisplay} />
-          <ConfigLabelAndValue label="Token" value={config.name} />
-          <ConfigLabelAndValue label="Decimals" value={config.decimals} />
+          <ConfigLabelAndValue
+            label="Token"
+            value={name}
+            isEditable={isSynthetic}
+            onChange={(v: string) => onChangeValue('name', v)}
+          />
+          <ConfigLabelAndValue label="Decimals" value={decimals} />
         </div>
-        <div className="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-1.5">
+        <div className="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-2">
           <ConfigLabelAndValue label="Type" value={typeDisplay} />
-          <ConfigLabelAndValue label="Symbol" value={config.symbol} />
-          <ConfigLabelAndValue label="Supply" value={config.totalSupply || 'Infinite'} />
+          <ConfigLabelAndValue
+            label="Symbol"
+            value={symbol}
+            isEditable={isSynthetic}
+            onChange={(v: string) => onChangeValue('symbol', v)}
+          />
+          <ConfigLabelAndValue label="Supply" value={supplyDisplay} />
         </div>
       </div>
-      <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5">
-        {tokenAddress && <ConfigLabelAndValue label="Collateral Address" value={tokenAddress} />}
-        <ConfigLabelAndValue label="Contract Owner" value={config.owner} />
+      <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2">
+        {tokenAddress && <ConfigLabelAndValue label="Collateral address" value={tokenAddress} />}
+        <ConfigLabelAndValue
+          label="Contract owner"
+          value={owner}
+          isEditable={true}
+          onChange={(v: string) => {
+            if (isAddress(v)) onChangeValue('owner', v);
+          }}
+        />
       </div>
     </div>
   );
 }
 
-function ConfigLabelAndValue({ label, value }: { label: string; value?: string | number }) {
+function ConfigLabelAndValue({
+  label,
+  value,
+  isEditable,
+  onChange,
+}: {
+  label: string;
+  value?: string | number;
+  isEditable?: boolean;
+  onChange?: (v: string) => void;
+}) {
+  const onClickEdit = () => {
+    if (!isEditable || !onChange) return;
+    const newValue = prompt(`Enter new ${label.toLowerCase()} value`);
+    if (!newValue) return;
+    onChange(newValue);
+  };
+
   return (
     <>
-      <span className="text-xs text-gray-700">{label}</span>
-      <span className="text-xs">{value || 'Unknown'}</span>
+      <div className="text-xs text-gray-700">{label}</div>
+      <div className="flex items-center gap-2.5">
+        <span className="text-xs">{value || 'Unknown'}</span>
+        {isEditable && (
+          <IconButton onClick={onClickEdit}>
+            <PencilIcon width={11} height={11} color={Color.gray['700']} />
+          </IconButton>
+        )}
+      </div>
     </>
   );
 }
 
-function InfoSection({ deploymentConfig }: { deploymentConfig: WarpDeploymentConfig }) {
+function InfoSection() {
+  const { deploymentConfig } = useWarpDeploymentConfig();
+
   const onClickCopy = () => {
+    if (!deploymentConfig) return;
     const yamlConfig = stringify(deploymentConfig.config);
     tryClipboardSet(yamlConfig);
     toast.success('Config copied to clipboard');
@@ -148,7 +192,7 @@ function ButtonSection() {
   return (
     <div className="mt-4 flex items-center justify-between">
       <BackButton page={CardPage.WarpForm} />
-      <SolidButton onClick={onClickContinue} className="gap-3 px-5 py-1.5" color="accent">
+      <SolidButton onClick={onClickContinue} className="gap-3 px-5 py-2" color="accent">
         <span>Deploy</span>
         <Image src={RocketIcon} width={14} height={14} alt="" />
       </SolidButton>

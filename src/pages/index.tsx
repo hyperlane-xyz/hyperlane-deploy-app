@@ -6,7 +6,7 @@ import { CardFlow } from '../flows/CardFlow';
 const Home: NextPage = () => {
   return (
     <div className="relative max-w-full space-y-3 pt-4">
-      <Card className="overflow-x-hidden sm:max-w-screen-sm">
+      <Card className="overflow-x-hidden">
         <CardFlow />
       </Card>
       <WalletFloatingButtons />
