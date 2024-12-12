@@ -29,6 +29,7 @@ import { WarpDeploymentConfigItem, WarpDeploymentFormValues } from './types';
 import { isCollateralTokenType } from './utils';
 import { validateWarpDeploymentForm } from './validation';
 
+// TODO use data from store if it exists (like when navigating back)
 const initialValues: WarpDeploymentFormValues = {
   configs: [
     {
@@ -59,12 +60,16 @@ export function WarpDeploymentForm() {
   const { setPage } = useCardNav();
   const { setDeploymentConfig } = useStore((s) => ({ setDeploymentConfig: s.setDeploymentConfig }));
 
-  const onSubmitForm = () => {
+  const onSubmitForm = (values: WarpDeploymentFormValues) => {
     if (!warpDeployConfig) {
       logger.warn('Warp deploy config is undefined, should have been set during validation');
       return;
     }
-    setDeploymentConfig({ type: DeploymentType.Warp, config: warpDeployConfig });
+    setDeploymentConfig({
+      type: DeploymentType.Warp,
+      config: warpDeployConfig,
+      chains: values.configs.map((c) => c.chainName),
+    });
     setPage(CardPage.WarpReview);
   };
 

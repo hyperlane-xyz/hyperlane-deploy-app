@@ -47,6 +47,7 @@
     "react-toastify": "^10.0.6",
     "viem": "^2.21.41",
     "wagmi": "^2.12.26",
+    "yaml": "^2.6.0",
     "zod": "3.21.4",
     "zod-validation-error": "^3.4.0",
     "zustand": "^4.4.7"
@@ -70,7 +71,6 @@
     "tailwindcss": "^3.4.15",
     "ts-node": "^10.9.2",
     "typescript": "5.6.3",
-    "yaml": "^2.6.0",
     "yaml-loader": "^0.8.1"
   },
   "homepage": "https://www.hyperlane.xyz",

@@ -10,7 +10,7 @@ export function LandingPage() {
   const { setPage } = useCardNav();
 
   return (
-    <div className="max-w-full space-y-6 p-4 text-center">
+    <div className="max-w-full space-y-6 p-4 text-center sm:max-w-screen-xs">
       <div className="relative -mx-8 flex items-center justify-center">
         <Image src={BlueWave} alt="" className="absolute left-0 right-0 top-[0.5rem] rotate-6" />
         <Image width={110} height={110} src={SpaceCraft} alt="" className="z-[5] -rotate-[16deg]" />

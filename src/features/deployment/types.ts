@@ -1,4 +1,4 @@
-import { WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
+import { ChainName, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 
 export enum DeploymentStatus {
   Preparing = 'preparing',
@@ -38,6 +38,7 @@ export enum DeploymentType {
 interface ConfigBase {
   type: DeploymentType;
   config: unknown;
+  chains: ChainName[];
 }
 
 export interface WarpDeploymentConfig extends ConfigBase {

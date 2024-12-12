@@ -4,7 +4,7 @@ import { FormButton } from '../../../components/buttons/FormButton';
 
 const TokenTypes = Object.values(TokenType).sort();
 const PopularTokenTypes = [TokenType.collateral, TokenType.native, TokenType.synthetic];
-const TokenTypeDescriptions: Record<TokenType, { label: string; description: string }> = {
+export const TokenTypeDescriptions: Record<TokenType, { label: string; description: string }> = {
   [TokenType.collateral]: {
     label: 'Collateral',
     description: 'A lock-and-mint wrapper for ERC20 tokens.',
