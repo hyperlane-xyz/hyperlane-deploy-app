@@ -1,5 +1,5 @@
 import { arbitrum, ethereum } from '@hyperlane-xyz/registry';
-import { TokenType, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
+import { TokenType } from '@hyperlane-xyz/sdk';
 import { isNumeric } from '@hyperlane-xyz/utils';
 import { Button, ErrorIcon, IconButton, useAccounts, XIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
@@ -22,14 +22,13 @@ import { ChainConnectionWarning } from '../../chains/ChainConnectionWarning';
 import { ChainSelectField } from '../../chains/ChainSelectField';
 import { ChainWalletWarning } from '../../chains/ChainWalletWarning';
 import { useMultiProvider } from '../../chains/hooks';
-import { useStore } from '../../store';
-import { DeploymentType } from '../types';
+import { useDeploymentConfig } from '../hooks';
+import { DeploymentConfig, DeploymentType } from '../types';
 import { TokenTypeSelectField } from './TokenTypeSelectField';
 import { WarpDeploymentConfigItem, WarpDeploymentFormValues } from './types';
 import { isCollateralTokenType } from './utils';
 import { validateWarpDeploymentForm } from './validation';
 
-// TODO use data from store if it exists (like when navigating back)
 const initialValues: WarpDeploymentFormValues = {
   configs: [
     {
@@ -48,28 +47,25 @@ export function WarpDeploymentForm() {
   const multiProvider = useMultiProvider();
   const { accounts } = useAccounts(multiProvider, config.addressBlacklist);
 
-  // Gets set in the validate method
-  let warpDeployConfig: WarpRouteDeployConfig | undefined = undefined;
-  const setWarpDeployConfig = (c: WarpRouteDeployConfig) => {
-    warpDeployConfig = c;
-  };
+  const { deploymentConfig, setDeploymentConfig } = useDeploymentConfig();
+  // This is redundant with the store value but a temp copy is needed
+  // to hold the result from the validation function because there's no
+  // re-render in between Formik's call of validate and onSubmit
+  let tempDeploymentConfig: DeploymentConfig | undefined = undefined;
+  const setTempDeploymentConfig = (c: DeploymentConfig) => (tempDeploymentConfig = c);
+
+  const initialValues = getInitialValues(deploymentConfig);
 
   const validate = (values: WarpDeploymentFormValues) =>
-    validateWarpDeploymentForm(values, accounts, multiProvider, setWarpDeployConfig);
+    validateWarpDeploymentForm(values, accounts, multiProvider, setTempDeploymentConfig);
 
   const { setPage } = useCardNav();
-  const { setDeploymentConfig } = useStore((s) => ({ setDeploymentConfig: s.setDeploymentConfig }));
-
-  const onSubmitForm = (values: WarpDeploymentFormValues) => {
-    if (!warpDeployConfig) {
+  const onSubmitForm = () => {
+    if (!tempDeploymentConfig) {
       logger.warn('Warp deploy config is undefined, should have been set during validation');
       return;
     }
-    setDeploymentConfig({
-      type: DeploymentType.Warp,
-      config: warpDeployConfig,
-      chains: values.configs.map((c) => c.chainName),
-    });
+    setDeploymentConfig(tempDeploymentConfig);
     setPage(CardPage.WarpReview);
   };
 
@@ -254,4 +250,18 @@ function WarningBanners() {
       />
     </div>
   );
+}
+
+function getInitialValues(
+  deploymentConfig: DeploymentConfig | undefined,
+): WarpDeploymentFormValues {
+  if (!deploymentConfig || deploymentConfig.type !== DeploymentType.Warp) return initialValues;
+  const { config, chains } = deploymentConfig;
+  return {
+    configs: chains.map((c) => ({
+      chainName: c,
+      tokenType: config[c].type,
+      tokenAddress: (config[c] as any).token,
+    })),
+  };
 }

@@ -3,7 +3,6 @@ import {
   ChainMap,
   MultiProtocolProvider,
   TokenRouterConfig,
-  WarpRouteDeployConfig,
   WarpRouteDeployConfigSchema,
 } from '@hyperlane-xyz/sdk';
 import {
@@ -19,6 +18,7 @@ import {
 import { AccountInfo, getAccountAddressForChain } from '@hyperlane-xyz/widgets';
 import { logger } from '../../../utils/logger';
 import { zodErrorToString } from '../../../utils/zod';
+import { DeploymentConfig, DeploymentType } from '../types';
 import { WarpDeploymentConfigItem, WarpDeploymentFormValues } from './types';
 import {
   getTokenMetadata,
@@ -34,7 +34,7 @@ export async function validateWarpDeploymentForm(
   { configs }: WarpDeploymentFormValues,
   accounts: Record<ProtocolType, AccountInfo>,
   multiProvider: MultiProtocolProvider,
-  onSuccess: (c: WarpRouteDeployConfig) => void,
+  onSuccess: (c: DeploymentConfig) => void,
 ): Promise<Record<string | number, string>> {
   try {
     const chainNames = configs.map((c) => c.chainName);
@@ -95,7 +95,12 @@ export async function validateWarpDeploymentForm(
 
     // TODO check account balances for each chain
 
-    onSuccess(combinedConfigValidationResult.data);
+    onSuccess({
+      type: DeploymentType.Warp,
+      config: combinedConfigValidationResult.data,
+      chains: chainNames,
+    });
+
     return {};
   } catch (error: any) {
     logger.error('Error validating form', error);
