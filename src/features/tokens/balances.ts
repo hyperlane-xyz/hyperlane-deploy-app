@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useToastError } from '../../components/toast/useToastError';
 import { useMultiProvider } from '../chains/hooks';
 
+// TODO remove?
 export function useBalance(chain?: ChainName, token?: IToken, address?: Address) {
   const multiProvider = useMultiProvider();
   const { isLoading, isError, error, data } = useQuery({
