@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { WarpDeploymentDeploy } from '../features/deployment/warp/WarpDeploymentDeploy';
 import { WarpDeploymentForm } from '../features/deployment/warp/WarpDeploymentForm';
 import { WarpDeploymentReview } from '../features/deployment/warp/WarpDeploymentReview';
 import { CardPage } from './CardPage';
@@ -25,6 +26,7 @@ export function CardFlow() {
         {page === CardPage.Landing && <LandingPage />}
         {page === CardPage.WarpForm && <WarpDeploymentForm />}
         {page === CardPage.WarpReview && <WarpDeploymentReview />}
+        {page === CardPage.WarpDeploy && <WarpDeploymentDeploy />}
       </motion.div>
       ;
     </AnimatePresence>

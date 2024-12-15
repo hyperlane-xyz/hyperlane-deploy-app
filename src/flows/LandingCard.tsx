@@ -10,17 +10,17 @@ export function LandingPage() {
   const { setPage } = useCardNav();
 
   return (
-    <div className="max-w-full space-y-6 p-4 text-center sm:max-w-screen-xs">
+    <div className="max-w-full space-y-6 p-4 text-center">
       <div className="relative -mx-8 flex items-center justify-center">
-        <Image src={BlueWave} alt="" className="absolute left-0 right-0 top-[0.5rem] rotate-6" />
+        <Image src={BlueWave} alt="" className="absolute left-0 right-0 top-[0.4rem] rotate-6" />
         <Image width={110} height={110} src={SpaceCraft} alt="" className="z-[5] -rotate-[16deg]" />
       </div>
       <h1 className="text-2xl text-primary-500">Deploy a Warp Route</h1>
-      <h2 className="px-2 text-md leading-relaxed">
+      <h2 className="max-w-md px-2 text-md leading-relaxed">
         Anyone can permissionlessly create an interchain token bridge by deploying Hyperlane Warp
         Route contracts.
       </h2>
-      <p className="px-2 text-sm leading-relaxed">
+      <p className="max-w-md px-2 text-sm leading-relaxed">
         Follow three steps to create a new route: configure your options, deploy your contracts, and
         set up a bridge UI.
       </p>
