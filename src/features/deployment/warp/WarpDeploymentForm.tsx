@@ -10,7 +10,7 @@ import { GrowAndFade, GrowAndFadeList } from '../../../components/animation/Grow
 import { BackButton } from '../../../components/buttons/BackButton';
 import { ConnectAwareSubmitButton } from '../../../components/buttons/ConnectAwareSubmitButton';
 import { TextInput } from '../../../components/input/TextField';
-import { H1 } from '../../../components/text/H1';
+import { H1 } from '../../../components/text/Headers';
 import { config } from '../../../consts/config';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';

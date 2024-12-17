@@ -1,13 +1,12 @@
 import { WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
 import { fromWeiRounded, isAddress, objLength } from '@hyperlane-xyz/utils';
-import { IconButton, PencilIcon, tryClipboardSet } from '@hyperlane-xyz/widgets';
+import { IconButton, PencilIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
-import { stringify } from 'yaml';
 import { BackButton } from '../../../components/buttons/BackButton';
 import { SolidButton } from '../../../components/buttons/SolidButton';
 import { A } from '../../../components/text/A';
-import { H1 } from '../../../components/text/H1';
+import { H1 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
@@ -22,6 +21,7 @@ import { isSyntheticTokenType } from './utils';
 
 // TODO move to widgets lib
 import InfoCircle from '../../../images/icons/info-circle.svg';
+import { tryCopyConfig } from '../utils';
 
 export function WarpDeploymentReview() {
   return (
@@ -157,10 +157,7 @@ function InfoSection() {
   const { deploymentConfig } = useWarpDeploymentConfig();
 
   const onClickCopy = () => {
-    if (!deploymentConfig) return;
-    const yamlConfig = stringify(deploymentConfig.config);
-    tryClipboardSet(yamlConfig);
-    toast.success('Config copied to clipboard');
+    tryCopyConfig(deploymentConfig);
   };
 
   return (

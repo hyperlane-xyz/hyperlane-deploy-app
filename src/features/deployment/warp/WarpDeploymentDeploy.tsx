@@ -6,7 +6,7 @@ import { SolidButton } from '../../../components/buttons/SolidButton';
 import { GasIcon } from '../../../components/icons/GasIcon';
 import { LogsIcon } from '../../../components/icons/LogsIcon';
 import { StopIcon } from '../../../components/icons/StopIcon';
-import { H1 } from '../../../components/text/H1';
+import { H1 } from '../../../components/text/Headers';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
 import { Color } from '../../../styles/Color';
@@ -32,9 +32,14 @@ function MainSection() {
   const { deploymentConfig } = useWarpDeploymentConfig();
   const _chains = deploymentConfig?.chains || [];
 
-  const [isDeploying, _setIsDeploying] = useState(true);
+  const [isDeploying, _setIsDeploying] = useState(false);
+  const [isOutOfFunds] = useState(true);
 
-  return <div className="space-y-3">{isDeploying ? <DeployStatus /> : <FundAccounts />}</div>;
+  return (
+    <div className="space-y-3">
+      {isDeploying ? <DeployStatus /> : isOutOfFunds ? <FundSingleAccount /> : <FundAccounts />}
+    </div>
+  );
 }
 
 function FundAccounts() {
@@ -54,11 +59,7 @@ function FundAccounts() {
 
   return (
     <div className="flex flex-col items-center space-y-5 py-4">
-      <div className="flex items-center justify-center gap-3">
-        <WalletIcon width={40} height={40} color={Color.primary['500']} />
-        <ArrowIcon width={30} height={30} color={Color.primary['500']} direction="e" />
-        <GasIcon width={38} height={38} color={Color.primary['500']} />
-      </div>
+      <FundIcons color={Color.primary['500']} />
       <p className="max-w-sm text-center text-sm leading-relaxed">
         To deploy your route, a temporary account must be funded for each chain. Unused amounts are
         refunded.
@@ -68,6 +69,37 @@ function FundAccounts() {
         className="px-3 py-1.5 text-sm"
         onClick={onClickFund}
       >{`Fund on ${currentChain} (Chain ${currentChainIndex + 1} / ${numChains})`}</SolidButton>
+    </div>
+  );
+}
+
+function FundSingleAccount() {
+  const onClickFund = () => {
+    // TODO transfers funds from wallet to deployer
+  };
+
+  return (
+    <div className="flex flex-col items-center space-y-5 py-4">
+      <FundIcons color={Color.amber['500']} />
+      <p className="text-center text-sm font-semibold leading-relaxed">
+        Deployer has insufficient funds on Ethereum.
+      </p>
+      <p className="max-w-sm text-center text-sm leading-relaxed">
+        Please transfer more funds to finish the deployment. Any used amounts will be refunded.
+      </p>
+      <SolidButton color="accent" className="px-8 py-1.5 text-md" onClick={onClickFund}>
+        Add funds
+      </SolidButton>
+    </div>
+  );
+}
+
+function FundIcons({ color }: { color: string }) {
+  return (
+    <div className="flex items-center justify-center gap-3">
+      <WalletIcon width={40} height={40} color={color} />
+      <ArrowIcon width={30} height={30} color={color} direction="e" />
+      <GasIcon width={38} height={38} color={color} />
     </div>
   );
 }

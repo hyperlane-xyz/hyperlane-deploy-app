@@ -2,15 +2,31 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { WarpDeploymentDeploy } from '../features/deployment/warp/WarpDeploymentDeploy';
 import { WarpDeploymentForm } from '../features/deployment/warp/WarpDeploymentForm';
 import { WarpDeploymentReview } from '../features/deployment/warp/WarpDeploymentReview';
+import { WarpDeploymentSuccess } from '../features/deployment/warp/WarpDeploymentSuccess';
 import { CardPage } from './CardPage';
 import { LandingPage } from './LandingCard';
 import { useCardNav } from './hooks';
+
+// Useful for development, do not use in production
+const FORCE_PAGE = undefined;
+// const FORCE_PAGE = CardPage.WarpSuccess;
+
+const PAGE_TO_COMPONENT: Record<CardPage, React.FC> = {
+  [CardPage.Landing]: LandingPage,
+  [CardPage.WarpForm]: WarpDeploymentForm,
+  [CardPage.WarpReview]: WarpDeploymentReview,
+  [CardPage.WarpDeploy]: WarpDeploymentDeploy,
+  [CardPage.WarpSuccess]: WarpDeploymentSuccess,
+  [CardPage.WarpError]: WarpDeploymentSuccess, // TODO
+};
 
 // TODO instead of this somewhat custom approach, a more idiomatic approach would be to
 // migrate the app to the AppRouter structure and then use pages instead of CardNav.
 // But animations may be more difficult and the AppRouter is tricky for SPAs.
 export function CardFlow() {
   const { page, direction } = useCardNav();
+
+  const PageComponent = PAGE_TO_COMPONENT[FORCE_PAGE || page];
 
   return (
     <AnimatePresence mode="wait" custom={direction}>
@@ -23,10 +39,7 @@ export function CardFlow() {
         animate="center"
         exit="exit"
       >
-        {page === CardPage.Landing && <LandingPage />}
-        {page === CardPage.WarpForm && <WarpDeploymentForm />}
-        {page === CardPage.WarpReview && <WarpDeploymentReview />}
-        {page === CardPage.WarpDeploy && <WarpDeploymentDeploy />}
+        <PageComponent />
       </motion.div>
       ;
     </AnimatePresence>

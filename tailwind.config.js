@@ -68,6 +68,8 @@ module.exports = {
           800: '#17462E',
           900: '#0F2F1E',
         },
+        yellow: {...defaultColors.yellow},
+        amber: {...defaultColors.amber}
       },
       fontSize: {
         xxs: '0.7rem',

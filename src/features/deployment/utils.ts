@@ -1,7 +1,15 @@
+import { tryClipboardSet } from '@hyperlane-xyz/widgets';
+import { toast } from 'react-toastify';
+import { stringify } from 'yaml';
 import ConfirmedIcon from '../../images/icons/confirmed-icon.svg';
 import DeliveredIcon from '../../images/icons/delivered-icon.svg';
 import ErrorCircleIcon from '../../images/icons/error-circle.svg';
-import { DeploymentStatus, FinalDeploymentStatuses, SentDeploymentStatuses } from './types';
+import {
+  DeploymentConfig,
+  DeploymentStatus,
+  FinalDeploymentStatuses,
+  SentDeploymentStatuses,
+} from './types';
 
 export function getDeploymentStatusLabel(
   status: DeploymentStatus,
@@ -61,4 +69,12 @@ export function getIconByDeploymentStatus(status: DeploymentStatus) {
     default:
       return ErrorCircleIcon;
   }
+}
+
+export async function tryCopyConfig(deploymentConfig: DeploymentConfig | undefined) {
+  if (!deploymentConfig) return;
+  const yamlConfig = stringify(deploymentConfig.config);
+  const result = await tryClipboardSet(yamlConfig);
+  if (result) toast.success('Config copied to clipboard');
+  else toast.error('Unable to set clipboard');
 }
