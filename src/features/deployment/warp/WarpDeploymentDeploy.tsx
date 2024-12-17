@@ -29,8 +29,9 @@ function HeaderSection() {
 }
 
 function MainSection() {
-  const { deploymentConfig } = useWarpDeploymentConfig();
-  const _chains = deploymentConfig?.chains || [];
+  // TODO remove?
+  // const { deploymentConfig } = useWarpDeploymentConfig();
+  // const _chains = deploymentConfig?.chains || [];
 
   const [isDeploying, _setIsDeploying] = useState(false);
   const [isOutOfFunds] = useState(true);
