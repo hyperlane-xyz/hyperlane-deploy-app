@@ -1,18 +1,16 @@
 import { shortenAddress } from '@hyperlane-xyz/utils';
-import { Button, CopyIcon } from '@hyperlane-xyz/widgets';
+import { CopyIcon } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
-import { RestartIcon } from '../../../components/icons/RestartIcon';
+import { RestartButton } from '../../../components/buttons/RestartButton';
 import { A } from '../../../components/text/A';
 import { H1, H2 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
-import { CardPage } from '../../../flows/CardPage';
-import { useCardNav } from '../../../flows/hooks';
 import { Color } from '../../../styles/Color';
 import { useWarpDeploymentConfig } from '../hooks';
 import { tryCopyConfig } from '../utils';
 
 export function WarpDeploymentSuccess() {
-  const { deploymentConfig, setDeploymentConfig } = useWarpDeploymentConfig();
+  const { deploymentConfig } = useWarpDeploymentConfig();
   const firstOwner = Object.values(deploymentConfig?.config || {})[0]?.owner;
   const firstOwnerDisplay = firstOwner ? ` (${shortenAddress(firstOwner)})` : '';
 
@@ -20,15 +18,9 @@ export function WarpDeploymentSuccess() {
     tryCopyConfig(deploymentConfig);
   };
 
-  const { setPage } = useCardNav();
-  const onClickNew = () => {
-    setDeploymentConfig(undefined);
-    setPage(CardPage.WarpForm);
-  };
-
   return (
     <div className="flex w-full flex-col items-center space-y-4 py-2 text-md">
-      <H1 className="text-center">Your Warp Route is Deployed!</H1>
+      <H1 className="text-center">Your Warp Route is Ready!</H1>
       <p className="max-w-lg text-center leading-relaxed">
         You can now use your route to transfer tokens across chains. Remaining funds in the deployer
         have been refunded.
@@ -61,10 +53,7 @@ export function WarpDeploymentSuccess() {
         </li>
       </ol>
 
-      <Button onClick={onClickNew} className="gap-2.5 pt-4">
-        <RestartIcon width={18} height={18} color={Color.accent['500']} />
-        <span className="text-accent-500">Start a new deployment</span>
-      </Button>
+      <RestartButton />
     </div>
   );
 }

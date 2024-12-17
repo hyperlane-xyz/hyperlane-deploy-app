@@ -4,5 +4,5 @@ export enum CardPage {
   WarpReview,
   WarpDeploy,
   WarpSuccess,
-  WarpError,
+  WarpFailure,
 }

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { WarpDeploymentDeploy } from '../features/deployment/warp/WarpDeploymentDeploy';
+import { WarpDeploymentFailure } from '../features/deployment/warp/WarpDeploymentFailure';
 import { WarpDeploymentForm } from '../features/deployment/warp/WarpDeploymentForm';
 import { WarpDeploymentReview } from '../features/deployment/warp/WarpDeploymentReview';
 import { WarpDeploymentSuccess } from '../features/deployment/warp/WarpDeploymentSuccess';
@@ -9,7 +10,7 @@ import { useCardNav } from './hooks';
 
 // Useful for development, do not use in production
 const FORCE_PAGE = undefined;
-// const FORCE_PAGE = CardPage.WarpSuccess;
+// const FORCE_PAGE = CardPage.WarpFailure;
 
 const PAGE_TO_COMPONENT: Record<CardPage, React.FC> = {
   [CardPage.Landing]: LandingPage,
@@ -17,7 +18,7 @@ const PAGE_TO_COMPONENT: Record<CardPage, React.FC> = {
   [CardPage.WarpReview]: WarpDeploymentReview,
   [CardPage.WarpDeploy]: WarpDeploymentDeploy,
   [CardPage.WarpSuccess]: WarpDeploymentSuccess,
-  [CardPage.WarpError]: WarpDeploymentSuccess, // TODO
+  [CardPage.WarpFailure]: WarpDeploymentFailure,
 };
 
 // TODO instead of this somewhat custom approach, a more idiomatic approach would be to
