@@ -4,16 +4,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useToastError } from '../../components/toast/useToastError';
 import { useMultiProvider } from '../chains/hooks';
 
-// TODO remove?
 export function useBalance(chain?: ChainName, token?: IToken, address?: Address) {
   const multiProvider = useMultiProvider();
+  
   const { isLoading, isError, error, data } = useQuery({
     // The Token and Multiprovider classes are not serializable, so we can't use it as a key
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['useBalance', chain, address, token?.addressOrDenom],
-    queryFn: () => {
-      if (!chain || !token || !address || !isValidAddress(address, token.protocol)) return null;
-      return token.getBalance(multiProvider, address);
+    queryFn: async () => {
+      if (!chain || !token || !address || !isValidAddress(address, token.protocol)) {
+        throw new Error('Invalid parameters');
+      }
+      return await token.getBalance(multiProvider, address);
     },
     refetchInterval: 5000,
   });
