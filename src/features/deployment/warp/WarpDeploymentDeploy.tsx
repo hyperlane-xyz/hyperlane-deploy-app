@@ -1,5 +1,14 @@
-import { ArrowIcon, Button, Modal, useModal, WalletIcon } from '@hyperlane-xyz/widgets';
-import { useState } from 'react';
+import {
+  ArrowIcon,
+  Button,
+  Modal,
+  SpinnerIcon,
+  useModal,
+  WalletIcon,
+} from '@hyperlane-xyz/widgets';
+import { useQuery } from '@tanstack/react-query';
+import { Wallet } from 'ethers';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SolidButton } from '../../../components/buttons/SolidButton';
@@ -12,7 +21,15 @@ import { useCardNav } from '../../../flows/hooks';
 import { Color } from '../../../styles/Color';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
+import { getOrCreateTempDeployerWallet } from '../../deployerWallet/manage';
 import { useWarpDeploymentConfig } from '../hooks';
+
+enum DeployStep {
+  PrepDeployer,
+  FundDeployer,
+  ExecuteDeploy,
+  AddFunds,
+}
 
 export function WarpDeploymentDeploy() {
   return (
@@ -32,24 +49,86 @@ function MainSection() {
   // TODO remove?
   // const { deploymentConfig } = useWarpDeploymentConfig();
   // const _chains = deploymentConfig?.chains || [];
+  const { setPage } = useCardNav();
 
-  const [isDeploying, _setIsDeploying] = useState(false);
-  const [isOutOfFunds] = useState(true);
+  const [step, setStep] = useState(DeployStep.PrepDeployer);
+  const [deployer, setDeployer] = useState<Wallet | undefined>(undefined);
+
+  const onDeployerReady = (wallet: Wallet) => {
+    setDeployer(wallet);
+    setStep(DeployStep.FundDeployer);
+  };
+
+  const onDeployerFunded = () => {
+    setStep(DeployStep.ExecuteDeploy);
+  };
+
+  const onFailure = (error: Error) => {
+    // TODO carry error over via store state
+    toast.error(error.message);
+    setPage(CardPage.WarpFailure);
+  };
 
   return (
     <div className="space-y-3">
-      {isDeploying ? <DeployStatus /> : isOutOfFunds ? <FundSingleAccount /> : <FundAccounts />}
+      {step === DeployStep.PrepDeployer && (
+        <PrepDeployerAccounts onSuccess={onDeployerReady} onFailure={onFailure} />
+      )}
+      {step === DeployStep.FundDeployer && deployer && (
+        <FundDeployerAccounts
+          deployer={deployer}
+          onSuccess={onDeployerFunded}
+          onFailure={onFailure}
+        />
+      )}
+      {step === DeployStep.ExecuteDeploy && deployer && <ExecuteDeploy />}
+      {step === DeployStep.AddFunds && deployer && <FundSingleDeployerAccount />}
     </div>
   );
 }
 
-function FundAccounts() {
+function PrepDeployerAccounts({
+  onSuccess,
+  onFailure,
+}: {
+  onSuccess: (wallet: Wallet) => void;
+  onFailure: (error: Error) => void;
+}) {
+  const { error, data } = useQuery({
+    queryKey: ['getDeployerWallet'],
+    queryFn: getOrCreateTempDeployerWallet,
+  });
+
+  useEffect(() => {
+    if (error) return onFailure(error);
+    if (data) return onSuccess(data);
+  }, [error, data, onSuccess, onFailure]);
+
+  return (
+    <div className="flex flex-col items-center gap-6 py-14">
+      <SpinnerIcon width={48} height={48} color={Color.primary['500']} />
+      <p className="text-center text-sm text-gray-700">Preparing deployer accounts</p>
+    </div>
+  );
+}
+
+function FundDeployerAccounts({
+  deployer,
+  onSuccess,
+  onFailure,
+}: {
+  deployer: Wallet;
+  onSuccess: () => void;
+  onFailure: (error: Error) => void;
+}) {
+  const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
   const chains = deploymentConfig?.chains || [];
   const numChains = chains.length;
 
   const [currentChainIndex, setCurrentChainIndex] = useState(0);
   const currentChain = chains[currentChainIndex];
+  const currentChainDisplay = getChainDisplayName(multiProvider, currentChain, true);
 
   const onClickFund = () => {
     // TODO create a temp deployer account and trigger a
@@ -59,22 +138,21 @@ function FundAccounts() {
   };
 
   return (
-    <div className="flex flex-col items-center space-y-5 py-4">
+    <div className="flex flex-col items-center space-y-6 py-4">
       <FundIcons color={Color.primary['500']} />
-      <p className="max-w-sm text-center text-sm leading-relaxed">
-        To deploy your route, a temporary account must be funded for each chain. Unused amounts are
-        refunded.
+      <p className="max-w-sm text-center text-md leading-relaxed">
+        To deploy, a temporary account must be funded for each chain. Unused amounts are refunded.
       </p>
       <SolidButton
         color="accent"
-        className="px-3 py-1.5 text-sm"
+        className="px-3 py-1.5 text-md"
         onClick={onClickFund}
-      >{`Fund on ${currentChain} (Chain ${currentChainIndex + 1} / ${numChains})`}</SolidButton>
+      >{`Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`}</SolidButton>
     </div>
   );
 }
 
-function FundSingleAccount() {
+function FundSingleDeployerAccount() {
   const onClickFund = () => {
     // TODO transfers funds from wallet to deployer
   };
@@ -98,14 +176,14 @@ function FundSingleAccount() {
 function FundIcons({ color }: { color: string }) {
   return (
     <div className="flex items-center justify-center gap-3">
-      <WalletIcon width={40} height={40} color={color} />
-      <ArrowIcon width={30} height={30} color={color} direction="e" />
-      <GasIcon width={38} height={38} color={color} />
+      <WalletIcon width={44} height={44} color={color} />
+      <ArrowIcon width={20} height={20} color={color} direction="e" />
+      <GasIcon width={42} height={42} color={color} />
     </div>
   );
 }
 
-function DeployStatus() {
+function ExecuteDeploy() {
   const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
   const chains = deploymentConfig?.chains || [];

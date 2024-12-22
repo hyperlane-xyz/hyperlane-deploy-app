@@ -11,10 +11,15 @@ export function hasTempDeployerWallet(): boolean {
 export async function getTempDeployerWallet(
   password: string,
   salt: string,
-): Promise<Wallet | null> {
-  logger.debug('Reading temp deployer wallet from local storage');
+): Promise<Wallet | undefined> {
+  logger.debug('Checking temp deployer wallet from local storage');
   const encryptedMnemonic = localStorage.getItem(STORAGE_PATH);
-  if (!encryptedMnemonic) return null;
+  if (!encryptedMnemonic) {
+    logger.debug('No temp deployer wallet found in local storage');
+    return undefined;
+  } else {
+    logger.debug('Found temp deployer wallet in local storage');
+  }
   const mnemonic = await decryptString(encryptedMnemonic, password, salt);
   return Wallet.fromMnemonic(mnemonic);
 }
