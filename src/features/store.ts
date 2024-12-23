@@ -17,6 +17,7 @@ import {
 } from './deployment/types';
 
 // Increment this when persist state has breaking changes
+// BEWARE: If this in incremented without a migration, the deployer keys will be lost
 const PERSIST_STATE_VERSION = 0;
 
 // Keeping everything here for now as state is simple
@@ -42,7 +43,6 @@ export interface AppState {
   // User history
   deployments: DeploymentContext[];
   addDeployment: (t: DeploymentContext) => void;
-  resetDeployments: () => void;
   updateDeploymentStatus: (i: number, s: DeploymentStatus) => void;
   failUnconfirmedDeployments: () => void;
 
@@ -53,8 +53,6 @@ export interface AppState {
 
   deploymentConfig: DeploymentConfig | undefined;
   setDeploymentConfig: (config: DeploymentConfig | undefined) => void;
-  isDeploymentLoading: boolean;
-  setIsDeploymentLoading: (isLoading: boolean) => void;
 
   isSideBarOpen: boolean;
   setIsSideBarOpen: (isOpen: boolean) => void;
@@ -108,9 +106,6 @@ export const useStore = create<AppState>()(
       addDeployment: (t) => {
         set((state) => ({ deployments: [...state.deployments, t] }));
       },
-      resetDeployments: () => {
-        set(() => ({ deployments: [] }));
-      },
       updateDeploymentStatus: (i, s) => {
         set((state) => {
           if (i >= state.deployments.length) return state;
@@ -141,10 +136,6 @@ export const useStore = create<AppState>()(
       deploymentConfig: undefined,
       setDeploymentConfig: (config: DeploymentConfig | undefined) => {
         set(() => ({ deploymentConfig: config }));
-      },
-      isDeploymentLoading: false,
-      setIsDeploymentLoading: (isLoading) => {
-        set(() => ({ isDeploymentLoading: isLoading }));
       },
 
       isSideBarOpen: false,

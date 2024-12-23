@@ -1,38 +1,31 @@
-import { ChainName, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
+import { ChainName, WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 
 export enum DeploymentStatus {
-  Preparing = 'preparing',
-  CreatingTxs = 'creating-txs',
-  SigningApprove = 'signing-approve',
-  ConfirmingApprove = 'confirming-approve',
-  SigningDeployment = 'signing-deployment',
-  ConfirmingDeployment = 'confirming-deployment',
-  ConfirmedDeployment = 'confirmed-deployment',
-  // TODO
-  Delivered = 'delivered',
+  Configured = 'configured',
+  Deploying = 'deploying',
+  Complete = 'complete',
+  Cancelled = 'cancelled',
   Failed = 'failed',
-}
-
-// TODO
-export const SentDeploymentStatuses = [
-  DeploymentStatus.ConfirmedDeployment,
-  DeploymentStatus.Delivered,
-];
-
-// Statuses considered not pending
-export const FinalDeploymentStatuses = [...SentDeploymentStatuses, DeploymentStatus.Failed];
-
-export interface DeploymentContext {
-  status: DeploymentStatus;
-  origin: ChainName;
-  destination: ChainName;
-  timestamp: number;
 }
 
 export enum DeploymentType {
   Warp = 'warp',
   Core = 'core',
   // Add more here as needed
+}
+
+export const FinalDeploymentStatuses = [
+  DeploymentStatus.Complete,
+  DeploymentStatus.Cancelled,
+  DeploymentStatus.Failed,
+];
+
+export interface DeploymentContext {
+  timestamp: number;
+  status: DeploymentStatus;
+  type: DeploymentType;
+  config: DeploymentConfig;
+  result?: DeploymentResult;
 }
 
 interface ConfigBase {
@@ -52,3 +45,20 @@ export interface CoreDeploymentConfig extends ConfigBase {
 }
 
 export type DeploymentConfig = WarpDeploymentConfig | CoreDeploymentConfig;
+
+interface ResultBase {
+  type: DeploymentType;
+  result: unknown;
+}
+
+export interface WarpDeploymentResult extends ResultBase {
+  type: DeploymentType.Warp;
+  result: WarpCoreConfig;
+}
+
+export interface CoreDeploymentResult extends ResultBase {
+  type: DeploymentType.Core;
+  config: any; // TODO
+}
+
+export type DeploymentResult = WarpDeploymentResult | CoreDeploymentResult;

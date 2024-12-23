@@ -15,12 +15,13 @@ import RocketIcon from '../../../images/icons/rocket.svg';
 import { Color } from '../../../styles/Color';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
-import { useWarpDeploymentConfig } from '../hooks';
+import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { TokenTypeDescriptions } from './TokenTypeSelectField';
 import { isSyntheticTokenType } from './utils';
 
 // TODO move to widgets lib
 import InfoCircle from '../../../images/icons/info-circle.svg';
+import { DeploymentStatus, DeploymentType } from '../types';
 import { tryCopyConfig } from '../utils';
 
 export function WarpDeploymentReview() {
@@ -183,14 +184,23 @@ function InfoSection() {
 
 function ButtonSection() {
   const { deploymentConfig } = useWarpDeploymentConfig();
+  const { addDeployment } = useDeploymentHistory();
   const { setPage } = useCardNav();
+
   const onClickContinue = () => {
+    if (!deploymentConfig) return;
     // Re-validate config before proceeding in case edits broke something
-    const result = WarpRouteDeployConfigSchema.safeParse(deploymentConfig?.config);
+    const result = WarpRouteDeployConfigSchema.safeParse(deploymentConfig.config);
     if (!result.success) {
       toast.error('Invalid config, please fix before deploying');
       return;
     }
+    addDeployment({
+      timestamp: Date.now(),
+      status: DeploymentStatus.Configured,
+      type: DeploymentType.Warp,
+      config: deploymentConfig,
+    });
     setPage(CardPage.WarpDeploy);
   };
 

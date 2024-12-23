@@ -151,7 +151,6 @@ function ExecuteDeploy() {
   const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
   const chains = deploymentConfig?.chains || [];
-  //TODO 'and' here
   const chainListString = chains.map((c) => getChainDisplayName(multiProvider, c, true)).join(', ');
 
   const { isOpen, open, close } = useModal();

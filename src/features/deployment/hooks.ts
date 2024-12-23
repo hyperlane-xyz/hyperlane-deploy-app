@@ -19,3 +19,11 @@ export function useCoreDeploymentConfig() {
   const warpConfig = deploymentConfig?.type === DeploymentType.Core ? deploymentConfig : undefined;
   return { deploymentConfig: warpConfig, setDeploymentConfig };
 }
+
+export function useDeploymentHistory() {
+  return useStore((s) => ({
+    deployments: s.deployments,
+    addDeployment: s.addDeployment,
+    updateDeploymentStatus: s.updateDeploymentStatus,
+  }));
+}
