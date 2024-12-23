@@ -14,31 +14,36 @@ import {
   useTransactionFns,
 } from '@hyperlane-xyz/widgets';
 import { useMutation } from '@tanstack/react-query';
-import { Wallet } from 'ethers';
 import { toastTxSuccess } from '../../components/toast/TxSuccessToast';
 import { useToastError } from '../../components/toast/useToastError';
 import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../chains/hooks';
 import { getChainDisplayName } from '../chains/utils';
 
-export function useFundDeployerAccount(deployer: Wallet, chainName: ChainName, gasUnits: bigint) {
+export function useFundDeployerAccount(
+  chainName: ChainName,
+  gasUnits: bigint,
+  deployerAddress?: Address,
+) {
   const multiProvider = useMultiProvider();
   const activeAccounts = useAccounts(multiProvider);
   const activeChains = useActiveChains(multiProvider);
   const transactionFns = useTransactionFns(multiProvider);
 
   const { isPending, mutateAsync, error } = useMutation({
-    mutationKey: ['fundDeployerAccount', deployer.address, chainName, gasUnits],
-    mutationFn: () =>
-      executeTransfer({
-        deployer,
+    mutationKey: ['fundDeployerAccount', deployerAddress, chainName, gasUnits],
+    mutationFn: () => {
+      if (!deployerAddress || !chainName || !gasUnits) return Promise.resolve(null);
+      return executeTransfer({
+        deployerAddress,
         chainName,
         gasUnits,
         multiProvider,
         activeAccounts,
         activeChains,
         transactionFns,
-      }),
+      });
+    },
   });
 
   useToastError(
@@ -54,7 +59,7 @@ export function useFundDeployerAccount(deployer: Wallet, chainName: ChainName, g
 }
 
 async function executeTransfer({
-  deployer,
+  deployerAddress,
   chainName,
   gasUnits,
   multiProvider,
@@ -62,7 +67,7 @@ async function executeTransfer({
   activeChains,
   transactionFns,
 }: {
-  deployer: Wallet;
+  deployerAddress: Address;
   chainName: ChainName;
   gasUnits: bigint;
   multiProvider: MultiProtocolProvider;
@@ -70,8 +75,7 @@ async function executeTransfer({
   activeChains: ReturnType<typeof useActiveChains>;
   transactionFns: ReturnType<typeof useTransactionFns>;
 }) {
-  const recipient = deployer.address;
-  logger.debug('Preparing to fund deployer', recipient, chainName);
+  logger.debug('Preparing to fund deployer', deployerAddress, chainName);
 
   const protocol = multiProvider.getProtocol(chainName);
   const sendTransaction = transactionFns[protocol].sendTransaction;
@@ -81,7 +85,7 @@ async function executeTransfer({
 
   const amount = await getFundingAmount(chainName, gasUnits, multiProvider);
   await assertSenderBalance(sender, chainName, amount, multiProvider);
-  const tx = await getFundingTx(recipient, chainName, amount, multiProvider);
+  const tx = await getFundingTx(deployerAddress, chainName, amount, multiProvider);
   const { hash, confirm } = await sendTransaction({
     tx,
     chainName,
@@ -115,7 +119,7 @@ async function assertSenderBalance(
   assert(balance >= amount, 'Insufficient balance for deployment');
 }
 
-// TODO edit Widgets lib to default to TypedTransaction instead of WarpTypedTransaction
+// TODO edit Widgets lib to default to TypedTransaction instead of WarpTypedTransaction?
 async function getFundingTx(
   recipient: Address,
   chainName: ChainName,

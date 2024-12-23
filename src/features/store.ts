@@ -1,6 +1,6 @@
 import { GithubRegistry, IRegistry } from '@hyperlane-xyz/registry';
 import { ChainMap, ChainMetadata, MultiProtocolProvider } from '@hyperlane-xyz/sdk';
-import { objFilter } from '@hyperlane-xyz/utils';
+import { objFilter, ProtocolType } from '@hyperlane-xyz/utils';
 import { toast } from 'react-toastify';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -8,6 +8,7 @@ import { config } from '../consts/config';
 import { CardPage } from '../flows/CardPage';
 import { logger } from '../utils/logger';
 import { assembleChainMetadata } from './chains/metadata';
+import type { TempDeployerKeys } from './deployerWallet/types';
 import {
   DeploymentConfig,
   DeploymentContext,
@@ -32,6 +33,11 @@ export interface AppState {
     chainMetadata: ChainMap<ChainMetadata>;
     multiProvider: MultiProtocolProvider;
   }) => void;
+
+  // Encrypted temp deployer keys
+  tempDeployerKeys: TempDeployerKeys;
+  setDeployerKey: (protocol: ProtocolType, key: string) => void;
+  removeDeployerKey: (protocol: ProtocolType) => void;
 
   // User history
   deployments: DeploymentContext[];
@@ -81,6 +87,20 @@ export const useStore = create<AppState>()(
       setContext: ({ registry, chainMetadata, multiProvider }) => {
         logger.debug('Setting warp context in store');
         set({ registry, chainMetadata, multiProvider });
+      },
+
+      // Encrypted deployer keys
+      tempDeployerKeys: {},
+      setDeployerKey: (protocol: ProtocolType, key: string) => {
+        logger.debug('Setting deployer key in store for:', protocol);
+        const tempDeployerKeys = { ...get().tempDeployerKeys, [protocol]: key };
+        set({ tempDeployerKeys });
+      },
+      removeDeployerKey: (protocol: ProtocolType) => {
+        logger.debug('Removing deployer key in store for:', protocol);
+        const tempDeployerKeys = { ...get().tempDeployerKeys };
+        delete tempDeployerKeys[protocol];
+        set({ tempDeployerKeys });
       },
 
       // User history
@@ -140,10 +160,11 @@ export const useStore = create<AppState>()(
 
     // Store config
     {
-      name: 'app-state', // name in storage
+      name: 'hyperlane-deploy-store', // name in storage
       partialize: (state) => ({
         // fields to persist
         chainMetadataOverrides: state.chainMetadataOverrides,
+        tempDeployerKeys: state.tempDeployerKeys,
         deployments: state.deployments,
       }),
       version: PERSIST_STATE_VERSION,

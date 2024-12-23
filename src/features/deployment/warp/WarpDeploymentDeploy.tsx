@@ -1,14 +1,5 @@
-import {
-  ArrowIcon,
-  Button,
-  Modal,
-  SpinnerIcon,
-  useModal,
-  WalletIcon,
-} from '@hyperlane-xyz/widgets';
-import { useQuery } from '@tanstack/react-query';
-import { Wallet } from 'ethers';
-import { useEffect, useState } from 'react';
+import { ArrowIcon, Button, Modal, useModal, WalletIcon } from '@hyperlane-xyz/widgets';
+import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SolidButton } from '../../../components/buttons/SolidButton';
@@ -23,11 +14,10 @@ import { Color } from '../../../styles/Color';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
-import { getOrCreateTempDeployerWallet } from '../../deployerWallet/manage';
+import { getDeployerAddressForProtocol, useTempDeployerWallets } from '../../deployerWallet/hooks';
 import { useWarpDeploymentConfig } from '../hooks';
 
 enum DeployStep {
-  PrepDeployer,
   FundDeployer,
   ExecuteDeploy,
   AddFunds,
@@ -48,18 +38,9 @@ function HeaderSection() {
 }
 
 function MainSection() {
-  // TODO remove?
-  // const { deploymentConfig } = useWarpDeploymentConfig();
-  // const _chains = deploymentConfig?.chains || [];
   const { setPage } = useCardNav();
 
-  const [step, setStep] = useState(DeployStep.PrepDeployer);
-  const [deployer, setDeployer] = useState<Wallet | undefined>(undefined);
-
-  const onDeployerReady = (wallet: Wallet) => {
-    setDeployer(wallet);
-    setStep(DeployStep.FundDeployer);
-  };
+  const [step, setStep] = useState(DeployStep.FundDeployer);
 
   const onDeployerFunded = () => {
     setStep(DeployStep.ExecuteDeploy);
@@ -73,68 +54,44 @@ function MainSection() {
 
   return (
     <div className="space-y-3">
-      {step === DeployStep.PrepDeployer && (
-        <PrepDeployerAccounts onSuccess={onDeployerReady} onFailure={onFailure} />
+      {step === DeployStep.FundDeployer && (
+        <FundDeployerAccounts onSuccess={onDeployerFunded} onFailure={onFailure} />
       )}
-      {step === DeployStep.FundDeployer && deployer && (
-        <FundDeployerAccounts deployer={deployer} onSuccess={onDeployerFunded} />
-      )}
-      {step === DeployStep.ExecuteDeploy && deployer && <ExecuteDeploy />}
-      {step === DeployStep.AddFunds && deployer && <FundSingleDeployerAccount />}
-    </div>
-  );
-}
-
-// TODO improve smoothness during card flow transition
-// Maybe fold this into FundDeployerAccounts to avoid spinner flash
-function PrepDeployerAccounts({
-  onSuccess,
-  onFailure,
-}: {
-  onSuccess: (wallet: Wallet) => void;
-  onFailure: (error: Error) => void;
-}) {
-  const { error, data } = useQuery({
-    queryKey: ['getDeployerWallet'],
-    queryFn: getOrCreateTempDeployerWallet,
-  });
-
-  useEffect(() => {
-    if (error) return onFailure(error);
-    if (data) return onSuccess(data);
-  }, [error, data, onSuccess, onFailure]);
-
-  return (
-    <div className="flex flex-col items-center gap-6 py-14">
-      <SpinnerIcon width={48} height={48} color={Color.primary['500']} />
-      <p className="text-center text-sm text-gray-700">Preparing deployer accounts</p>
+      {step === DeployStep.ExecuteDeploy && <ExecuteDeploy />}
+      {step === DeployStep.AddFunds && <FundSingleDeployerAccount />}
     </div>
   );
 }
 
 function FundDeployerAccounts({
-  deployer,
   onSuccess,
+  onFailure,
 }: {
-  deployer: Wallet;
   onSuccess: () => void;
+  onFailure: (error: Error) => void;
 }) {
   const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
-  const chains = deploymentConfig?.chains || [];
-  const numChains = chains.length;
 
+  const chains = deploymentConfig?.chains || [];
+  const protocols = Array.from(new Set(chains.map((c) => multiProvider.getProtocol(c))));
+  const numChains = chains.length;
   const [currentChainIndex, setCurrentChainIndex] = useState(0);
   const currentChain = chains[currentChainIndex];
+  const currentChainProtocol = multiProvider.getProtocol(currentChain);
   const currentChainDisplay = getChainDisplayName(multiProvider, currentChain, true);
 
-  const { isPending, triggerTransaction } = useFundDeployerAccount(
-    deployer,
+  const { wallets, isLoading: isDeployerLoading } = useTempDeployerWallets(protocols, onFailure);
+  const deployerAddress = getDeployerAddressForProtocol(wallets, currentChainProtocol);
+
+  const { isPending: isTxPending, triggerTransaction } = useFundDeployerAccount(
     currentChain,
     WARP_DEPLOY_GAS_UNITS,
+    deployerAddress,
   );
 
   const onClickFund = async () => {
+    if (!deployerAddress) return;
     await triggerTransaction();
     if (currentChainIndex < numChains - 1) {
       setCurrentChainIndex(currentChainIndex + 1);
@@ -153,7 +110,7 @@ function FundDeployerAccounts({
         color="accent"
         className="px-3 py-1.5 text-md"
         onClick={onClickFund}
-        disabled={isPending}
+        disabled={isTxPending || isDeployerLoading}
       >{`Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`}</SolidButton>
     </div>
   );
