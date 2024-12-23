@@ -8,6 +8,7 @@ export function hasTempDeployerWallet(): boolean {
   return !!localStorage.getItem(STORAGE_PATH);
 }
 
+// TODO redo this in a multi-protocol way, otherwise backwards compat may break when it's changed later
 export async function getTempDeployerWallet(
   password: string,
   salt: string,

@@ -16,11 +16,13 @@ import { GasIcon } from '../../../components/icons/GasIcon';
 import { LogsIcon } from '../../../components/icons/LogsIcon';
 import { StopIcon } from '../../../components/icons/StopIcon';
 import { H1 } from '../../../components/text/Headers';
+import { WARP_DEPLOY_GAS_UNITS } from '../../../consts/consts';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
 import { Color } from '../../../styles/Color';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
+import { useFundDeployerAccount } from '../../deployerWallet/fund';
 import { getOrCreateTempDeployerWallet } from '../../deployerWallet/manage';
 import { useWarpDeploymentConfig } from '../hooks';
 
@@ -75,11 +77,7 @@ function MainSection() {
         <PrepDeployerAccounts onSuccess={onDeployerReady} onFailure={onFailure} />
       )}
       {step === DeployStep.FundDeployer && deployer && (
-        <FundDeployerAccounts
-          deployer={deployer}
-          onSuccess={onDeployerFunded}
-          onFailure={onFailure}
-        />
+        <FundDeployerAccounts deployer={deployer} onSuccess={onDeployerFunded} />
       )}
       {step === DeployStep.ExecuteDeploy && deployer && <ExecuteDeploy />}
       {step === DeployStep.AddFunds && deployer && <FundSingleDeployerAccount />}
@@ -87,6 +85,8 @@ function MainSection() {
   );
 }
 
+// TODO improve smoothness during card flow transition
+// Maybe fold this into FundDeployerAccounts to avoid spinner flash
 function PrepDeployerAccounts({
   onSuccess,
   onFailure,
@@ -115,11 +115,9 @@ function PrepDeployerAccounts({
 function FundDeployerAccounts({
   deployer,
   onSuccess,
-  onFailure,
 }: {
   deployer: Wallet;
   onSuccess: () => void;
-  onFailure: (error: Error) => void;
 }) {
   const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
@@ -130,10 +128,18 @@ function FundDeployerAccounts({
   const currentChain = chains[currentChainIndex];
   const currentChainDisplay = getChainDisplayName(multiProvider, currentChain, true);
 
-  const onClickFund = () => {
-    // TODO create a temp deployer account and trigger a
+  const { isPending, triggerTransaction } = useFundDeployerAccount(
+    deployer,
+    currentChain,
+    WARP_DEPLOY_GAS_UNITS,
+  );
+
+  const onClickFund = async () => {
+    await triggerTransaction();
     if (currentChainIndex < numChains - 1) {
       setCurrentChainIndex(currentChainIndex + 1);
+    } else {
+      onSuccess();
     }
   };
 
@@ -147,6 +153,7 @@ function FundDeployerAccounts({
         color="accent"
         className="px-3 py-1.5 text-md"
         onClick={onClickFund}
+        disabled={isPending}
       >{`Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`}</SolidButton>
     </div>
   );

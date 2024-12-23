@@ -3,11 +3,11 @@ import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { logger } from '../../utils/logger';
 
-export function useToastError(error: any, errorMsg?: string) {
+export function useToastError(error: any, context: string) {
   useEffect(() => {
     if (!error) return;
-    const message = errorMsg || errorToString(error, 500);
-    logger.error(message, error);
-    toast.error(errorMsg);
-  }, [error, errorMsg]);
+    logger.error(context, error);
+    const errorMsg = errorToString(error, 150);
+    toast.error(`${context}: ${errorMsg}`);
+  }, [error, context]);
 }
