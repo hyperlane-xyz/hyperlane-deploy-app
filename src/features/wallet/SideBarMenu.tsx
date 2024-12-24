@@ -1,16 +1,15 @@
 import { toTitleCase } from '@hyperlane-xyz/utils';
-import { AccountList, Button, SpinnerIcon } from '@hyperlane-xyz/widgets';
+import { AccountList, Button } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import CollapseIcon from '../../images/icons/collapse-icon.svg';
-import { Color } from '../../styles/Color';
 import { useMultiProvider } from '../chains/hooks';
 import { getChainDisplayName } from '../chains/utils';
 import { DeploymentsDetailsModal } from '../deployment/DeploymentDetailsModal';
+import { DeploymentStatusIcon } from '../deployment/DeploymentStatusIcon';
 import { useDeploymentHistory } from '../deployment/hooks';
-import { DeploymentContext, DeploymentStatus } from '../deployment/types';
-import { getIconByDeploymentStatus } from '../deployment/utils';
+import { DeploymentContext } from '../deployment/types';
 
 export function SideBarMenu({
   onClickConnectWallet,
@@ -64,7 +63,6 @@ export function SideBarMenu({
               {sortedDeployments.map((t, i) => (
                 <DeploymentSummary
                   key={i}
-                  index={sortedDeployments.length - i}
                   deployment={t}
                   onClick={() => {
                     setSelectedDeployment(t);
@@ -90,15 +88,12 @@ export function SideBarMenu({
 
 function DeploymentSummary({
   deployment,
-  index,
   onClick,
 }: {
   deployment: DeploymentContext;
-  index: number;
   onClick: () => void;
 }) {
-  const { timestamp, status, type, config } = deployment;
-  const Icon = getIconByDeploymentStatus(status);
+  const { id, timestamp, status, config } = deployment;
   const timeDisplay = new Date(timestamp).toLocaleDateString();
 
   const multiProvider = useMultiProvider();
@@ -114,15 +109,11 @@ function DeploymentSummary({
       className="w-full justify-between rounded-sm px-2 py-2 hover:bg-gray-200"
     >
       <div className="space-y-0.5 text-left">
-        <h4 className="text-sm">{`${toTitleCase(type)} Deployment #${index} - ${timeDisplay}`}</h4>
+        <h4 className="text-sm">{`${toTitleCase(config.type)} Deployment #${id} - ${timeDisplay}`}</h4>
         <p className="text-xs">{chainList}</p>
       </div>
-      <div className="flex h-5 w-5">
-        {status === DeploymentStatus.Deploying ? (
-          <SpinnerIcon className="-ml-1 mr-3 h-5 w-5" />
-        ) : (
-          <Icon width={25} height={25} color={Color.primary['500']} />
-        )}
+      <div className="flex">
+        <DeploymentStatusIcon status={status} size={20} />
       </div>
     </Button>
   );

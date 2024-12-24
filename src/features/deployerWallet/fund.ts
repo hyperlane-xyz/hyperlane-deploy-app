@@ -20,6 +20,9 @@ import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../chains/hooks';
 import { getChainDisplayName } from '../chains/utils';
 
+const USER_REJECTED_ERROR = 'User rejected';
+const CHAIN_MISMATCH_ERROR = 'ChainMismatchError';
+
 export function useFundDeployerAccount(
   chainName: ChainName,
   gasUnits: bigint,
@@ -86,16 +89,27 @@ async function executeTransfer({
   const amount = await getFundingAmount(chainName, gasUnits, multiProvider);
   await assertSenderBalance(sender, chainName, amount, multiProvider);
   const tx = await getFundingTx(deployerAddress, chainName, amount, multiProvider);
-  const { hash, confirm } = await sendTransaction({
-    tx,
-    chainName,
-    activeChainName,
-  });
 
-  const txReceipt = await confirm();
-  logger.debug(`Deployer funding tx confirmed on ${chainName}, hash: ${hash}`);
-  toastTxSuccess(`Deployer funded on ${chainName}!`, hash, origin);
-  return txReceipt;
+  try {
+    const { hash, confirm } = await sendTransaction({
+      tx,
+      chainName,
+      activeChainName,
+    });
+    const txReceipt = await confirm();
+    logger.debug(`Deployer funding tx confirmed on ${chainName}, hash: ${hash}`);
+    toastTxSuccess(`Deployer funded on ${chainName}!`, hash, origin);
+    return txReceipt;
+  } catch (error: any) {
+    const errorDetails = error.message || error.toString();
+    if (errorDetails.includes(CHAIN_MISMATCH_ERROR)) {
+      throw new Error(`Wallet must be connected to ${chainName}`);
+    } else if (errorDetails.includes(USER_REJECTED_ERROR)) {
+      throw new Error('User rejected transaction');
+    } else {
+      throw error;
+    }
+  }
 }
 
 async function getFundingAmount(

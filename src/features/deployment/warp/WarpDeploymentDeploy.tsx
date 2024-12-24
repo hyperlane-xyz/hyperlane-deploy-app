@@ -15,7 +15,8 @@ import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
 import { getDeployerAddressForProtocol, useTempDeployerWallets } from '../../deployerWallet/hooks';
-import { useWarpDeploymentConfig } from '../hooks';
+import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
+import { DeploymentStatus } from '../types';
 
 enum DeployStep {
   FundDeployer,
@@ -181,10 +182,12 @@ function ExecuteDeploy() {
 }
 
 function ButtonSection() {
+  const { updateDeploymentStatus, currentIndex } = useDeploymentHistory();
   const { setPage } = useCardNav();
   const onClickCancel = () => {
     // TODO cancel in SDK if possible?
     toast.warn('Deployment cancelled');
+    updateDeploymentStatus(currentIndex, DeploymentStatus.Cancelled);
     setPage(CardPage.WarpForm);
   };
 

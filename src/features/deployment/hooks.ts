@@ -21,9 +21,13 @@ export function useCoreDeploymentConfig() {
 }
 
 export function useDeploymentHistory() {
-  return useStore((s) => ({
+  const state = useStore((s) => ({
     deployments: s.deployments,
     addDeployment: s.addDeployment,
     updateDeploymentStatus: s.updateDeploymentStatus,
   }));
+  return {
+    ...state,
+    currentIndex: state.deployments.length - 1,
+  };
 }

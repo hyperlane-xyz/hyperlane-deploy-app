@@ -42,9 +42,9 @@ export interface AppState {
 
   // User history
   deployments: DeploymentContext[];
-  addDeployment: (t: DeploymentContext) => void;
+  addDeployment: (t: Omit<DeploymentContext, 'id' | 'timestamp'>) => void;
   updateDeploymentStatus: (i: number, s: DeploymentStatus) => void;
-  failUnconfirmedDeployments: () => void;
+  cancelPendingDeployments: () => void;
 
   // Shared component state
   cardPage: CardPage;
@@ -104,7 +104,9 @@ export const useStore = create<AppState>()(
       // User history
       deployments: [],
       addDeployment: (t) => {
-        set((state) => ({ deployments: [...state.deployments, t] }));
+        const currentDeployments = get().deployments;
+        const newDeployment = { ...t, id: currentDeployments.length + 1, timestamp: Date.now() };
+        set({ deployments: [...currentDeployments, newDeployment] });
       },
       updateDeploymentStatus: (i, s) => {
         set((state) => {
@@ -116,12 +118,12 @@ export const useStore = create<AppState>()(
           };
         });
       },
-      failUnconfirmedDeployments: () => {
+      cancelPendingDeployments: () => {
         set((state) => ({
           deployments: state.deployments.map((t) =>
             FinalDeploymentStatuses.includes(t.status)
               ? t
-              : { ...t, status: DeploymentStatus.Failed },
+              : { ...t, status: DeploymentStatus.Cancelled },
           ),
         }));
       },
@@ -162,7 +164,7 @@ export const useStore = create<AppState>()(
       onRehydrateStorage: () => {
         logger.debug('Rehydrating state');
         return (state, error) => {
-          state?.failUnconfirmedDeployments();
+          state?.cancelPendingDeployments();
           if (error || !state) {
             logger.error('Error during hydration', error);
             return;

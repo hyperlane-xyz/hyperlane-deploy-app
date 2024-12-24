@@ -21,9 +21,9 @@ export const FinalDeploymentStatuses = [
 ];
 
 export interface DeploymentContext {
+  id: number;
   timestamp: number;
   status: DeploymentStatus;
-  type: DeploymentType;
   config: DeploymentConfig;
   result?: DeploymentResult;
 }

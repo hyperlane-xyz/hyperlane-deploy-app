@@ -21,7 +21,7 @@ import { isSyntheticTokenType } from './utils';
 
 // TODO move to widgets lib
 import InfoCircle from '../../../images/icons/info-circle.svg';
-import { DeploymentStatus, DeploymentType } from '../types';
+import { DeploymentStatus } from '../types';
 import { tryCopyConfig } from '../utils';
 
 export function WarpDeploymentReview() {
@@ -196,9 +196,7 @@ function ButtonSection() {
       return;
     }
     addDeployment({
-      timestamp: Date.now(),
       status: DeploymentStatus.Configured,
-      type: DeploymentType.Warp,
       config: deploymentConfig,
     });
     setPage(CardPage.WarpDeploy);
