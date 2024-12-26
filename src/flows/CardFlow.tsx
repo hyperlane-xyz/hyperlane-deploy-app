@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { SlideIn } from '../components/animation/SlideIn';
 import { WarpDeploymentDeploy } from '../features/deployment/warp/WarpDeploymentDeploy';
 import { WarpDeploymentFailure } from '../features/deployment/warp/WarpDeploymentFailure';
 import { WarpDeploymentForm } from '../features/deployment/warp/WarpDeploymentForm';
@@ -30,32 +30,8 @@ export function CardFlow() {
   const PageComponent = PAGE_TO_COMPONENT[FORCE_PAGE || page];
 
   return (
-    <AnimatePresence mode="wait" custom={direction}>
-      <motion.div
-        key={page}
-        custom={direction}
-        variants={variants}
-        transition={transition}
-        initial="enter"
-        animate="center"
-        exit="exit"
-      >
-        <PageComponent />
-      </motion.div>
-      ;
-    </AnimatePresence>
+    <SlideIn key={page} direction={direction}>
+      <PageComponent />
+    </SlideIn>
   );
 }
-
-const variants = {
-  enter: (direction: 'forward' | 'backward') => ({
-    opacity: 0,
-    x: direction === 'forward' ? 40 : -40,
-  }),
-  center: { opacity: 1, x: 0 },
-  exit: (direction: 'forward' | 'backward') => ({
-    opacity: 0,
-    x: direction === 'forward' ? -40 : 40,
-  }),
-};
-const transition = { duration: 0.3 };

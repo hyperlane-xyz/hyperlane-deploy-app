@@ -25,13 +25,13 @@ export function PlanetSpinner() {
     >
       <Image
         src={Planet1}
-        width={90}
-        height={90}
+        width={80}
+        height={80}
         alt=""
         className="animate-[spin_70s_linear_infinite]"
       />
       <motion.div style={{ position: 'absolute', x: x, y: y }}>
-        <Image src={Planet2} width={26} height={26} alt="" className="" />
+        <Image src={Planet2} width={22} height={22} alt="" />
       </motion.div>
     </div>
   );

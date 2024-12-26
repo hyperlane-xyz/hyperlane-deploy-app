@@ -1,7 +1,8 @@
-import { ArrowIcon, Button, Modal, useModal, WalletIcon } from '@hyperlane-xyz/widgets';
-import { useState } from 'react';
+import { Button, Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
+import { SlideIn } from '../../../components/animation/SlideIn';
 import { SolidButton } from '../../../components/buttons/SolidButton';
 import { GasIcon } from '../../../components/icons/GasIcon';
 import { LogsIcon } from '../../../components/icons/LogsIcon';
@@ -15,6 +16,7 @@ import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
 import { getDeployerAddressForProtocol, useTempDeployerWallets } from '../../deployerWallet/hooks';
+import { useRefundDeployerAccounts } from '../../deployerWallet/refund';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentStatus } from '../types';
 
@@ -22,14 +24,17 @@ enum DeployStep {
   FundDeployer,
   ExecuteDeploy,
   AddFunds,
+  CancelDeploy,
 }
 
 export function WarpDeploymentDeploy() {
+  const [step, setStep] = useState(DeployStep.FundDeployer);
+
   return (
-    <div className="flex w-full flex-col items-center space-y-5 py-2 xs:min-w-100">
+    <div className="flex w-full flex-col items-center space-y-4 py-2 xs:min-w-100">
       <HeaderSection />
-      <MainSection />
-      <ButtonSection />
+      <MainSection step={step} setStep={setStep} />
+      <ButtonSection step={step} setStep={setStep} />
     </div>
   );
 }
@@ -38,10 +43,8 @@ function HeaderSection() {
   return <H1 className="text-center">Deploying Warp Route</H1>;
 }
 
-function MainSection() {
+function MainSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployStep) => void }) {
   const { setPage } = useCardNav();
-
-  const [step, setStep] = useState(DeployStep.FundDeployer);
 
   const onDeployerFunded = () => {
     setStep(DeployStep.ExecuteDeploy);
@@ -54,12 +57,15 @@ function MainSection() {
   };
 
   return (
-    <div className="space-y-3">
-      {step === DeployStep.FundDeployer && (
-        <FundDeployerAccounts onSuccess={onDeployerFunded} onFailure={onFailure} />
-      )}
-      {step === DeployStep.ExecuteDeploy && <ExecuteDeploy />}
-      {step === DeployStep.AddFunds && <FundSingleDeployerAccount />}
+    <div className="flex grow flex-col items-center justify-center space-y-3 sm:min-h-[18rem]">
+      <SlideIn key={step} direction="forward">
+        {step === DeployStep.FundDeployer && (
+          <FundDeployerAccounts onSuccess={onDeployerFunded} onFailure={onFailure} />
+        )}
+        {step === DeployStep.ExecuteDeploy && <ExecuteDeploy />}
+        {step === DeployStep.AddFunds && <FundSingleDeployerAccount />}
+        {step === DeployStep.CancelDeploy && <CancelDeploy />}
+      </SlideIn>
     </div>
   );
 }
@@ -102,14 +108,14 @@ function FundDeployerAccounts({
   };
 
   return (
-    <div className="flex flex-col items-center space-y-6 py-4">
-      <FundIcons color={Color.primary['500']} />
+    <div className="flex flex-col items-center space-y-7">
+      <FundIcon color={Color.primary['500']} />
       <p className="max-w-sm text-center text-md leading-relaxed">
         To deploy, a temporary account must be funded for each chain. Unused amounts are refunded.
       </p>
       <SolidButton
         color="accent"
-        className="px-3 py-1.5 text-md"
+        className="px-4 py-1.5 text-md"
         onClick={onClickFund}
         disabled={isTxPending || isDeployerLoading}
       >{`Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`}</SolidButton>
@@ -124,7 +130,7 @@ function FundSingleDeployerAccount() {
 
   return (
     <div className="flex flex-col items-center space-y-5 py-4">
-      <FundIcons color={Color.amber['500']} />
+      <FundIcon color={Color.amber['500']} />
       <p className="text-center text-sm font-semibold leading-relaxed">
         Deployer has insufficient funds on Ethereum.
       </p>
@@ -138,12 +144,10 @@ function FundSingleDeployerAccount() {
   );
 }
 
-function FundIcons({ color }: { color: string }) {
+function FundIcon({ color }: { color: string }) {
   return (
-    <div className="flex items-center justify-center gap-3">
-      <WalletIcon width={44} height={44} color={color} />
-      <ArrowIcon width={20} height={20} color={color} direction="e" />
-      <GasIcon width={42} height={42} color={color} />
+    <div className="flex items-center justify-center">
+      <GasIcon width={68} height={68} color={color} />
     </div>
   );
 }
@@ -167,10 +171,10 @@ function ExecuteDeploy() {
       </div>
       <div className="mt-1">
         <p className="max-w-sm text-gray-700">{`Deploying to ${chainListString}`}</p>
-        <p className="text-gray-700">This will take a few minutes.</p>
-        <p className="mt-2 text-sm">TODO status text</p>
+        <p className="text-gray-700">This will take a few minutes</p>
+        <p className="mt-3">TODO status text</p>
       </div>
-      <Button onClick={onClickViewLogs} className="mt-4 gap-2.5">
+      <Button onClick={onClickViewLogs} className="mt-3 gap-2.5">
         <LogsIcon width={14} height={14} color={Color.accent['500']} />
         <span className="text-md text-accent-500">View deployment logs</span>
       </Button>
@@ -181,18 +185,39 @@ function ExecuteDeploy() {
   );
 }
 
-function ButtonSection() {
-  const { updateDeploymentStatus, currentIndex } = useDeploymentHistory();
+function CancelDeploy() {
   const { setPage } = useCardNav();
-  const onClickCancel = () => {
-    // TODO cancel in SDK if possible?
-    toast.warn('Deployment cancelled');
-    updateDeploymentStatus(currentIndex, DeploymentStatus.Cancelled);
+  const onSuccess = () => {
     setPage(CardPage.WarpForm);
+  };
+  const refundDeployer = useRefundDeployerAccounts({ onSuccess });
+  // Run on mount
+  useEffect(() => {
+    refundDeployer();
+  }, [refundDeployer]);
+
+  return (
+    <div className="flex flex-col items-center space-y-7">
+      <SpinnerIcon width={70} height={70} color={Color.primary['500']} />
+      <p className="max-w-sm text-center text-md leading-relaxed">
+        Canceling the deployment and refunding any unused deployer balances
+      </p>
+      <p className="max-w-sm text-center text-md leading-relaxed">This may take a minute</p>
+    </div>
+  );
+}
+
+function ButtonSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployStep) => void }) {
+  const { updateDeploymentStatus, currentIndex } = useDeploymentHistory();
+  // const { setPage } = useCardNav();
+  // setPage(CardPage.WarpForm);
+  const onClickCancel = () => {
+    updateDeploymentStatus(currentIndex, DeploymentStatus.Cancelled);
+    setStep(DeployStep.CancelDeploy);
   };
 
   return (
-    <Button onClick={onClickCancel} className="gap-2.5">
+    <Button onClick={onClickCancel} className="gap-2.5" disabled={step === DeployStep.CancelDeploy}>
       <StopIcon width={16} height={16} color={Color.accent['500']} />
       <span className="text-md text-accent-500">Cancel deployment</span>
     </Button>

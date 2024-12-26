@@ -7,6 +7,7 @@ import { ChainSelectListModal } from './ChainSelectModal';
 import { useMultiProvider } from './hooks';
 import { getChainDisplayName } from './utils';
 
+// TODO refactor away from origin/destination
 export function ChainConnectionWarning({
   origin,
   destination,

@@ -7,6 +7,7 @@ import { logger } from '../../utils/logger';
 import { useMultiProvider } from './hooks';
 import { getChainDisplayName } from './utils';
 
+// TODO refactor away from origin
 export function ChainWalletWarning({ origin }: { origin: ChainName }) {
   const multiProvider = useMultiProvider();
 

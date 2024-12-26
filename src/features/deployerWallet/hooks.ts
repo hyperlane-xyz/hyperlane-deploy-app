@@ -40,10 +40,6 @@ export function useTempDeployerWallets(
   };
 }
 
-// export function useSetTempDeployerWallet(protocols: ProtocolType[]) {
-//   const setDeployerKey = useStore((s) => s.setDeployerKey);
-// }
-
 export function useRemoveTempDeployerWallet(protocols: ProtocolType[]) {
   const removeDeployerKey = useStore((s) => s.removeDeployerKey);
   return () => protocols.map((p) => removeDeployerKey(p));

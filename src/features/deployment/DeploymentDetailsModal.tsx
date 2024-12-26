@@ -69,7 +69,7 @@ function CollapsibleData({ data, label }: { data: any; label: string }) {
           </DisclosureButton>
           <DisclosurePanel
             transition
-            className="relative mt-1 overflow-x-auto rounded-md bg-primary-500/5 px-1.5 py-1 text-xs transition duration-200 data-[closed]:-translate-y-4 data-[closed]:opacity-0"
+            className="relative mt-1 overflow-x-auto rounded-md bg-primary-500/5 px-1.5 py-1 text-xs transition duration-300 data-[closed]:-translate-y-4 data-[closed]:opacity-0"
           >
             <pre>{yamlConfig}</pre>
             <CopyButton
