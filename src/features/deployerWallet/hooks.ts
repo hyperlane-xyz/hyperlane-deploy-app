@@ -74,6 +74,7 @@ async function getOrCreateTempDeployerWallets(
   return wallets;
 }
 
+// TODO multi-protocol support
 async function createTempDeployerWallet(protocol: ProtocolType): Promise<[TypedWallet, string]> {
   logger.info('Creating temp deployer wallet for:', protocol);
   let wallet: TypedWallet;
@@ -95,6 +96,7 @@ async function createTempDeployerWallet(protocol: ProtocolType): Promise<[TypedW
   return [wallet, encryptedKey];
 }
 
+// TODO multi-protocol support
 async function getTempDeployerWallet(
   protocol: ProtocolType,
   encryptedKey: string,
@@ -113,10 +115,12 @@ async function getTempDeployerWallet(
   }
 }
 
+// TODO multi-protocol support
 export function getDeployerAddressForProtocol(
   wallets: TempDeployerWallets,
-  protocol: ProtocolType,
+  protocol?: ProtocolType,
 ) {
+  if (!protocol) return undefined;
   const typedWallet = wallets[protocol];
   if (!typedWallet) return undefined;
   if (typedWallet.type === ProviderType.EthersV5) {

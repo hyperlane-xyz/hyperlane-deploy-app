@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useStore } from '../store';
 import { DeploymentType } from './types';
 
@@ -30,4 +31,12 @@ export function useDeploymentHistory() {
     ...state,
     currentIndex: state.deployments.length - 1,
   };
+}
+
+export function useDeploymentChains() {
+  const { deployments } = useDeploymentHistory();
+  return useMemo<ChainName[]>(
+    () => Array.from(new Set(deployments.map((d) => d.config.chains).flat())),
+    [deployments],
+  );
 }

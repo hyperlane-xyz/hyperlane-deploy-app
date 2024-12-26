@@ -57,16 +57,19 @@ export async function assembleChainMetadata(
     (_, m): m is ChainMetadata => m.protocol === ProtocolType.Ethereum,
   );
 
-  const chainMetadata = mergeChainMetadataMap(evmRegistryChainMetadata, filesystemMetadata);
+  let chainMetadata = mergeChainMetadataMap(evmRegistryChainMetadata, filesystemMetadata);
 
   // Filter to only chains for which there are core deployment artifacts in the registry
   // May want to revisit this later but it would require a way for users to provide these addresses
-  const chainsWithMailboxes = objFilter(
+  chainMetadata = objFilter(
     chainMetadata,
     (c, m): m is ChainMetadata => !!chainAddresses[c]?.mailbox,
   );
 
+  // Filter to only chains with native token information as this is used in a few places
+  chainMetadata = objFilter(chainMetadata, (_, m): m is ChainMetadata => !!m.nativeToken);
+
   const chainMetadataWithOverrides = mergeChainMetadataMap(chainMetadata, storeMetadataOverrides);
 
-  return { chainMetadata: chainsWithMailboxes, chainMetadataWithOverrides };
+  return { chainMetadata, chainMetadataWithOverrides };
 }

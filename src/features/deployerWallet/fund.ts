@@ -1,8 +1,8 @@
 import {
-  EvmNativeTokenAdapter,
   getChainIdNumber,
   MultiProtocolProvider,
   ProviderType,
+  Token,
   WarpTxCategory,
   WarpTypedTransaction,
 } from '@hyperlane-xyz/sdk';
@@ -80,15 +80,17 @@ async function executeTransfer({
 }) {
   logger.debug('Preparing to fund deployer', deployerAddress, chainName);
 
-  const protocol = multiProvider.getProtocol(chainName);
-  const sendTransaction = transactionFns[protocol].sendTransaction;
-  const activeChainName = activeChains.chains[protocol].chainName;
+  const chainMetadata = multiProvider.getChainMetadata(chainName);
+  const sendTransaction = transactionFns[chainMetadata.protocol].sendTransaction;
+  const activeChainName = activeChains.chains[chainMetadata.protocol].chainName;
   const sender = getAccountAddressForChain(multiProvider, chainName, activeAccounts.accounts);
   if (!sender) throw new Error(`No active account found for chain ${chainName}`);
 
   const amount = await getFundingAmount(chainName, gasUnits, multiProvider);
-  await assertSenderBalance(sender, chainName, amount, multiProvider);
-  const tx = await getFundingTx(deployerAddress, chainName, amount, multiProvider);
+
+  const token = Token.FromChainMetadataNativeToken(chainMetadata);
+  await assertSenderBalance(sender, amount, token, multiProvider);
+  const tx = await getFundingTx(deployerAddress, amount, token, multiProvider);
 
   try {
     const { hash, confirm } = await sendTransaction({
@@ -112,6 +114,7 @@ async function executeTransfer({
   }
 }
 
+// TODO multi-protocol support
 async function getFundingAmount(
   chainName: ChainName,
   gasUnits: bigint,
@@ -124,26 +127,27 @@ async function getFundingAmount(
 
 async function assertSenderBalance(
   sender: Address,
-  chainName: ChainName,
   amount: bigint,
+  token: Token,
   multiProvider: MultiProtocolProvider,
 ) {
-  const adapter = new EvmNativeTokenAdapter(chainName, multiProvider, {});
-  const balance = await adapter.getBalance(sender);
-  assert(balance >= amount, 'Insufficient balance for deployment');
+  const balance = await token.getBalance(multiProvider, sender);
+  assert(balance.amount >= amount, 'Insufficient balance for deployment');
 }
 
 // TODO edit Widgets lib to default to TypedTransaction instead of WarpTypedTransaction?
+// TODO multi-protocol support
 async function getFundingTx(
   recipient: Address,
-  chainName: ChainName,
   amount: bigint,
+  token: Token,
   multiProvider: MultiProtocolProvider,
 ): Promise<WarpTypedTransaction> {
-  const adapter = new EvmNativeTokenAdapter(chainName, multiProvider, {});
-  const tx = await adapter.populateTransferTx({ recipient, weiAmountOrId: amount });
+  const tx = token
+    .getAdapter(multiProvider)
+    .populateTransferTx({ recipient, weiAmountOrId: amount });
   // Add chainId to help reduce likely of wallet signing on wrong chain
-  const chainId = getChainIdNumber(multiProvider.getChainMetadata(chainName));
+  const chainId = getChainIdNumber(multiProvider.getChainMetadata(token.chainName));
   // TODO remove data when widgets lib is updated
   const txParams = { ...tx, chainId, data: '0x' };
   return {

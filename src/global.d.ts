@@ -1,7 +1,5 @@
-declare type Address = string;
+declare type Address = UtilsAddress;
 declare type ChainName = string;
-declare type ChainId = number | string;
-declare type DomainId = number;
 
 declare module '*.yaml' {
   const data: any;
