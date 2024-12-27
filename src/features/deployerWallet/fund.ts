@@ -1,11 +1,4 @@
-import {
-  getChainIdNumber,
-  MultiProtocolProvider,
-  ProviderType,
-  Token,
-  WarpTxCategory,
-  WarpTypedTransaction,
-} from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider, Token } from '@hyperlane-xyz/sdk';
 import { assert } from '@hyperlane-xyz/utils';
 import {
   getAccountAddressForChain,
@@ -19,6 +12,7 @@ import { useToastError } from '../../components/toast/useToastError';
 import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../chains/hooks';
 import { getChainDisplayName } from '../chains/utils';
+import { getTransferTx } from './transactions';
 
 const USER_REJECTED_ERROR = 'User rejected';
 const CHAIN_MISMATCH_ERROR = 'ChainMismatchError';
@@ -90,7 +84,7 @@ async function executeTransfer({
 
   const token = Token.FromChainMetadataNativeToken(chainMetadata);
   await assertSenderBalance(sender, amount, token, multiProvider);
-  const tx = await getFundingTx(deployerAddress, amount, token, multiProvider);
+  const tx = await getTransferTx(deployerAddress, amount, token, multiProvider);
 
   try {
     const { hash, confirm } = await sendTransaction({
@@ -133,26 +127,4 @@ async function assertSenderBalance(
 ) {
   const balance = await token.getBalance(multiProvider, sender);
   assert(balance.amount >= amount, 'Insufficient balance for deployment');
-}
-
-// TODO edit Widgets lib to default to TypedTransaction instead of WarpTypedTransaction?
-// TODO multi-protocol support
-async function getFundingTx(
-  recipient: Address,
-  amount: bigint,
-  token: Token,
-  multiProvider: MultiProtocolProvider,
-): Promise<WarpTypedTransaction> {
-  const tx = token
-    .getAdapter(multiProvider)
-    .populateTransferTx({ recipient, weiAmountOrId: amount });
-  // Add chainId to help reduce likely of wallet signing on wrong chain
-  const chainId = getChainIdNumber(multiProvider.getChainMetadata(token.chainName));
-  // TODO remove data when widgets lib is updated
-  const txParams = { ...tx, chainId, data: '0x' };
-  return {
-    type: ProviderType.EthersV5,
-    transaction: txParams,
-    category: WarpTxCategory.Transfer,
-  };
 }

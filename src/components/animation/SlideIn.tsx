@@ -2,14 +2,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { PropsWithChildren } from 'react';
 
 export function SlideIn({
-  key,
+  motionKey,
   direction,
   children,
-}: PropsWithChildren<{ key: string | number; direction: 'forward' | 'backward' }>) {
+}: PropsWithChildren<{ motionKey: string | number; direction: 'forward' | 'backward' }>) {
   return (
     <AnimatePresence mode="wait" custom={direction}>
       <motion.div
-        key={key}
+        key={motionKey}
         custom={direction}
         variants={variants}
         transition={transition}

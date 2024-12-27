@@ -30,7 +30,7 @@ export function CardFlow() {
   const PageComponent = PAGE_TO_COMPONENT[FORCE_PAGE || page];
 
   return (
-    <SlideIn key={page} direction={direction}>
+    <SlideIn motionKey={page} direction={direction}>
       <PageComponent />
     </SlideIn>
   );

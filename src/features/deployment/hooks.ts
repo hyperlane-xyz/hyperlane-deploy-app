@@ -1,4 +1,6 @@
+import { ProtocolType } from '@hyperlane-xyz/utils';
 import { useMemo } from 'react';
+import { useMultiProvider } from '../chains/hooks';
 import { useStore } from '../store';
 import { DeploymentType } from './types';
 
@@ -34,9 +36,13 @@ export function useDeploymentHistory() {
 }
 
 export function useDeploymentChains() {
+  const multiProvider = useMultiProvider();
   const { deployments } = useDeploymentHistory();
-  return useMemo<ChainName[]>(
-    () => Array.from(new Set(deployments.map((d) => d.config.chains).flat())),
-    [deployments],
-  );
+  return useMemo<{ chains: ChainName[]; protocols: ProtocolType[] }>(() => {
+    const chains = Array.from(new Set(deployments.map((d) => d.config.chains).flat()));
+    const protocols = Array.from(
+      new Set(chains.map((c) => multiProvider.tryGetProtocol(c)).filter((p) => !!p)),
+    );
+    return { chains, protocols };
+  }, [deployments, multiProvider]);
 }

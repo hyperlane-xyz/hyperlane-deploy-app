@@ -1,23 +1,34 @@
-import { MultiProtocolProvider, Token } from '@hyperlane-xyz/sdk';
-import { ProtocolType } from '@hyperlane-xyz/utils';
+import {
+  MultiProtocolProvider,
+  Token,
+  TypedTransaction,
+  TypedTransactionReceipt,
+} from '@hyperlane-xyz/sdk';
+import { assert, ProtocolType } from '@hyperlane-xyz/utils';
+import { AccountInfo, getAccountAddressForChain, useAccounts } from '@hyperlane-xyz/widgets';
 import { useMutation } from '@tanstack/react-query';
+import BigNumber from 'bignumber.js';
 import { useToastError } from '../../components/toast/useToastError';
+import { REFUND_FEE_PADDING_FACTOR } from '../../consts/consts';
 import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../chains/hooks';
+import { getChainDisplayName } from '../chains/utils';
 import { useDeploymentChains } from '../deployment/hooks';
-import { getDeployerAddressForProtocol, useTempDeployerWallets } from './hooks';
+import { getTransferTx, sendTxFromWallet } from './transactions';
 import { TempDeployerWallets } from './types';
+import { getDeployerAddressForProtocol, useTempDeployerWallets } from './wallets';
 
-export function useRefundDeployerAccounts({ onSuccess }: { onSuccess?: () => void }) {
+export function useRefundDeployerAccounts(onSettled?: () => void) {
   const multiProvider = useMultiProvider();
-  const chains = useDeploymentChains();
-  const { wallets } = useTempDeployerWallets([]);
+  const { chains, protocols } = useDeploymentChains();
+  const { wallets } = useTempDeployerWallets(protocols);
+  const { accounts } = useAccounts(multiProvider);
 
-  const { error, mutate } = useMutation({
-    mutationKey: ['refundDeployerAccounts', chains, wallets],
-    mutationFn: () => refundDeployerAccounts(chains, wallets, multiProvider),
-    retry: 3,
-    onSuccess,
+  const { error, mutate, mutateAsync, submittedAt, isIdle } = useMutation({
+    mutationKey: ['refundDeployerAccounts', chains, wallets, accounts],
+    mutationFn: () => refundDeployerAccounts(chains, wallets, multiProvider, accounts),
+    retry: false,
+    onSettled,
   });
 
   useToastError(
@@ -25,17 +36,23 @@ export function useRefundDeployerAccounts({ onSuccess }: { onSuccess?: () => voi
     'Error refunding deployer balances. The key has been stored. Please try again later.',
   );
 
-  return mutate;
+  return {
+    refund: mutate,
+    refundAsync: mutateAsync,
+    isIdle,
+    hasRun: !!submittedAt,
+  };
 }
 
 async function refundDeployerAccounts(
   chains: ChainName[],
   wallets: TempDeployerWallets,
   multiProvider: MultiProtocolProvider,
+  accounts: Record<ProtocolType, AccountInfo>,
 ) {
   logger.info('Refunding deployer accounts');
   const nonZeroBalances = await getDeployerBalances(chains, wallets, multiProvider);
-  const txReceipts = await transferBalances(nonZeroBalances, wallets, multiProvider);
+  await transferBalances(nonZeroBalances, wallets, multiProvider, accounts);
   logger.info('Done refunding deployer accounts');
   return true;
 }
@@ -54,24 +71,34 @@ async function getDeployerBalances(
 ) {
   const balances: Array<PromiseSettledResult<Balance | undefined>> = await Promise.allSettled(
     chains.map(async (chainName) => {
-      const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
-      const address = getDeployerAddressForProtocol(wallets, chainMetadata?.protocol);
-      if (!chainMetadata || !address) return undefined;
-      const token = Token.FromChainMetadataNativeToken(chainMetadata);
-      logger.debug('Checking balance', chainName, address);
-      const balance = await token.getBalance(multiProvider, address);
-      logger.debug('Balance retrieved', chainName, address, balance.amount);
-      return { chainName, protocol: chainMetadata.protocol, address, amount: balance.amount };
+      try {
+        const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
+        const address = getDeployerAddressForProtocol(wallets, chainMetadata?.protocol);
+        if (!chainMetadata || !address) return undefined;
+        const token = Token.FromChainMetadataNativeToken(chainMetadata);
+        logger.debug('Checking balance', chainName, address);
+        const balance = await token.getBalance(multiProvider, address);
+        logger.debug('Balance retrieved', chainName, address, balance.amount);
+        return { chainName, protocol: chainMetadata.protocol, address, amount: balance.amount };
+      } catch (error: unknown) {
+        const msg = `Error getting balance for chain ${chainName}`;
+        logger.error(msg, error);
+        throw new Error(msg, { cause: error });
+      }
     }),
   );
+
   const nonZeroBalances = balances
     .filter((b) => b.status === 'fulfilled')
     .map((b) => b.value)
     .filter((b): b is Balance => !!b && b.amount > 0n);
-  logger.debug(
-    'Non-zero balances found for chains:',
-    nonZeroBalances.map((b) => b.chainName),
-  );
+  if (nonZeroBalances.length) {
+    logger.debug(
+      'Non-zero balances found for chains:',
+      nonZeroBalances.map((b) => b.chainName).join(', '),
+    );
+  }
+
   return nonZeroBalances;
 }
 
@@ -79,16 +106,79 @@ async function transferBalances(
   balances: Balance[],
   wallets: TempDeployerWallets,
   multiProvider: MultiProtocolProvider,
+  accounts: Record<ProtocolType, AccountInfo>,
 ) {
-  const txReceipts: Array<PromiseSettledResult<string>> = await Promise.allSettled(
+  const txReceipts: Array<PromiseSettledResult<TypedTransactionReceipt>> = await Promise.allSettled(
     balances.map(async (balance) => {
-      const { chainName, protocol, address: deployerAddress, amount } = balance;
-      const chainMetadata = multiProvider.getChainMetadata(chainName);
-      const token = Token.FromChainMetadataNativeToken(chainMetadata);
-      logger.debug('Preparing transfer', chainName, amount);
-      // TODO generalize and call getFundingTx from fund.ts
+      const { chainName, protocol, amount: balanceAmount, address: deployerAddress } = balance;
+      logger.debug('Preparing transfer from deployer', chainName, balanceAmount);
+
+      try {
+        const chainMetadata = multiProvider.getChainMetadata(chainName);
+        const token = Token.FromChainMetadataNativeToken(chainMetadata);
+        const recipient = getAccountAddressForChain(multiProvider, chainName, accounts);
+        assert(recipient, `No user account found for chain ${chainName}`);
+        const deployer = wallets[protocol];
+        assert(deployer, `No deployer wallet found for protocol ${protocol}`);
+
+        const estimationTx = await getTransferTx(recipient, balanceAmount, token, multiProvider);
+        const adjustedAmount = await computeNetTransferAmount(
+          chainName,
+          estimationTx,
+          balanceAmount,
+          multiProvider,
+          deployerAddress,
+        );
+        const tx = await getTransferTx(recipient, adjustedAmount, token, multiProvider);
+
+        const txReceipt = await sendTxFromWallet(deployer, tx, chainName, multiProvider);
+        logger.debug('Transfer tx confirmed on chain', chainName, txReceipt.receipt);
+        return txReceipt;
+      } catch (error) {
+        const msg = `Error refunding balance on chain ${chainName}`;
+        logger.error(msg, error);
+        throw new Error(msg, { cause: error });
+      }
     }),
   );
 
-  // TODO process txReceipts
+  const failedTransferChains = balances
+    .filter((_, i) => txReceipts[i].status === 'rejected')
+    .map((b) => b.chainName)
+    .map((c) => getChainDisplayName(multiProvider, c));
+  if (failedTransferChains.length) {
+    throw new Error(
+      `Failed to transfer deployer balances on chains: ${failedTransferChains.join(', ')}`,
+    );
+  } else {
+    return txReceipts.filter((t) => t.status === 'fulfilled').map((r) => r.value);
+  }
+}
+
+async function computeNetTransferAmount(
+  chain: ChainName,
+  transaction: TypedTransaction,
+  balance: bigint,
+  multiProvider: MultiProtocolProvider,
+  sender: Address,
+) {
+  const { fee } = await multiProvider.estimateTransactionFee({
+    chainNameOrId: chain,
+    transaction,
+    sender,
+  });
+  logger.debug(`Estimated fee for transfer on ${chain}`, fee);
+  // Using BigNumber here because BigInts don't support decimals
+  const paddedFee = new BigNumber(fee.toString())
+    .times(REFUND_FEE_PADDING_FACTOR)
+    .decimalPlaces(0, BigNumber.ROUND_UP);
+  const netAmount = new BigNumber(balance.toString()).minus(paddedFee);
+  if (netAmount.gt(0)) {
+    const netAmountBn = BigInt(netAmount.toFixed(0));
+    logger.debug(`Net amount for transfer on ${chain}`, netAmountBn);
+    return netAmountBn;
+  } else {
+    logger.warn(`Estimated fee is greater than balance on ${chain}`);
+    return 0n;
+  }
 }

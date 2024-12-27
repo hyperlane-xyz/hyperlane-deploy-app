@@ -1,4 +1,4 @@
-declare type Address = UtilsAddress;
+declare type Address = string;
 declare type ChainName = string;
 
 declare module '*.yaml' {

@@ -12,11 +12,15 @@ import { WARP_DEPLOY_GAS_UNITS } from '../../../consts/consts';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
 import { Color } from '../../../styles/Color';
+import { useThrottle } from '../../../utils/useThrottle';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
-import { getDeployerAddressForProtocol, useTempDeployerWallets } from '../../deployerWallet/hooks';
 import { useRefundDeployerAccounts } from '../../deployerWallet/refund';
+import {
+  getDeployerAddressForProtocol,
+  useTempDeployerWallets,
+} from '../../deployerWallet/wallets';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentStatus } from '../types';
 
@@ -58,7 +62,7 @@ function MainSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployS
 
   return (
     <div className="flex grow flex-col items-center justify-center space-y-3 sm:min-h-[18rem]">
-      <SlideIn key={step} direction="forward">
+      <SlideIn motionKey={step} direction="forward">
         {step === DeployStep.FundDeployer && (
           <FundDeployerAccounts onSuccess={onDeployerFunded} onFailure={onFailure} />
         )}
@@ -187,14 +191,12 @@ function ExecuteDeploy() {
 
 function CancelDeploy() {
   const { setPage } = useCardNav();
-  const onSuccess = () => {
-    setPage(CardPage.WarpForm);
-  };
-  const refundDeployer = useRefundDeployerAccounts({ onSuccess });
-  // Run on mount
+  const onSettled = () => setPage(CardPage.WarpForm);
+  const { refund, isIdle } = useRefundDeployerAccounts(onSettled);
+  const throttledRefund = useThrottle(refund, 10_000);
   useEffect(() => {
-    refundDeployer();
-  }, [refundDeployer]);
+    if (isIdle) throttledRefund();
+  }, [isIdle, throttledRefund]);
 
   return (
     <div className="flex flex-col items-center space-y-7">
@@ -209,8 +211,6 @@ function CancelDeploy() {
 
 function ButtonSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployStep) => void }) {
   const { updateDeploymentStatus, currentIndex } = useDeploymentHistory();
-  // const { setPage } = useCardNav();
-  // setPage(CardPage.WarpForm);
   const onClickCancel = () => {
     updateDeploymentStatus(currentIndex, DeploymentStatus.Cancelled);
     setStep(DeployStep.CancelDeploy);
