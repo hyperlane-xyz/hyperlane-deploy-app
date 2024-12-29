@@ -1,6 +1,6 @@
 import type { NextPage } from 'next';
 import { Card } from '../components/layout/Card';
-import { WalletFloatingButtons } from '../features/wallet/WalletFloatingButtons';
+import { FloatingButtonRow } from '../components/nav/FloatingButtonRow';
 import { CardFlow } from '../flows/CardFlow';
 
 const Home: NextPage = () => {
@@ -9,7 +9,7 @@ const Home: NextPage = () => {
       <Card className="overflow-x-hidden">
         <CardFlow />
       </Card>
-      <WalletFloatingButtons />
+      <FloatingButtonRow />
     </div>
   );
 };

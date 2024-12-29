@@ -14,17 +14,18 @@ import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../chains/hooks';
 import { getChainDisplayName } from '../chains/utils';
 import { useDeploymentChains } from '../deployment/hooks';
+import { Balance, getDeployerBalances } from './balances';
 import { getTransferTx, sendTxFromWallet } from './transactions';
-import { TempDeployerWallets } from './types';
-import { getDeployerAddressForProtocol, useTempDeployerWallets } from './wallets';
+import { DeployerWallets } from './types';
+import { useDeployerWallets } from './wallets';
 
 export function useRefundDeployerAccounts(onSettled?: () => void) {
   const multiProvider = useMultiProvider();
-  const { chains, protocols } = useDeploymentChains();
-  const { wallets } = useTempDeployerWallets(protocols);
+  const { chains } = useDeploymentChains();
+  const { wallets } = useDeployerWallets();
   const { accounts } = useAccounts(multiProvider);
 
-  const { error, mutate, mutateAsync, submittedAt, isIdle } = useMutation({
+  const { error, mutate, mutateAsync, submittedAt, isIdle, isPending } = useMutation({
     mutationKey: ['refundDeployerAccounts', chains, wallets, accounts],
     mutationFn: () => refundDeployerAccounts(chains, wallets, multiProvider, accounts),
     retry: false,
@@ -41,12 +42,13 @@ export function useRefundDeployerAccounts(onSettled?: () => void) {
     refundAsync: mutateAsync,
     isIdle,
     hasRun: !!submittedAt,
+    isPending,
   };
 }
 
 async function refundDeployerAccounts(
   chains: ChainName[],
-  wallets: TempDeployerWallets,
+  wallets: DeployerWallets,
   multiProvider: MultiProtocolProvider,
   accounts: Record<ProtocolType, AccountInfo>,
 ) {
@@ -57,54 +59,9 @@ async function refundDeployerAccounts(
   return true;
 }
 
-interface Balance {
-  chainName: ChainName;
-  protocol: ProtocolType;
-  address: Address;
-  amount: bigint;
-}
-
-async function getDeployerBalances(
-  chains: ChainName[],
-  wallets: TempDeployerWallets,
-  multiProvider: MultiProtocolProvider,
-) {
-  const balances: Array<PromiseSettledResult<Balance | undefined>> = await Promise.allSettled(
-    chains.map(async (chainName) => {
-      try {
-        const chainMetadata = multiProvider.tryGetChainMetadata(chainName);
-        const address = getDeployerAddressForProtocol(wallets, chainMetadata?.protocol);
-        if (!chainMetadata || !address) return undefined;
-        const token = Token.FromChainMetadataNativeToken(chainMetadata);
-        logger.debug('Checking balance', chainName, address);
-        const balance = await token.getBalance(multiProvider, address);
-        logger.debug('Balance retrieved', chainName, address, balance.amount);
-        return { chainName, protocol: chainMetadata.protocol, address, amount: balance.amount };
-      } catch (error: unknown) {
-        const msg = `Error getting balance for chain ${chainName}`;
-        logger.error(msg, error);
-        throw new Error(msg, { cause: error });
-      }
-    }),
-  );
-
-  const nonZeroBalances = balances
-    .filter((b) => b.status === 'fulfilled')
-    .map((b) => b.value)
-    .filter((b): b is Balance => !!b && b.amount > 0n);
-  if (nonZeroBalances.length) {
-    logger.debug(
-      'Non-zero balances found for chains:',
-      nonZeroBalances.map((b) => b.chainName).join(', '),
-    );
-  }
-
-  return nonZeroBalances;
-}
-
 async function transferBalances(
   balances: Balance[],
-  wallets: TempDeployerWallets,
+  wallets: DeployerWallets,
   multiProvider: MultiProtocolProvider,
   accounts: Record<ProtocolType, AccountInfo>,
 ) {

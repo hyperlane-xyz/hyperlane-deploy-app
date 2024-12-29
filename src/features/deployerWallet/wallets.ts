@@ -1,30 +1,52 @@
 import { ProviderType } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
-import { utils, Wallet } from 'ethers';
+import { Wallet } from 'ethers';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { config } from '../../consts/config';
 import { logger } from '../../utils/logger';
+import { tryPersistBrowserStorage } from '../../utils/storage';
 import { useStore } from '../store';
 import { decryptString, encryptString } from './encryption';
-import { TempDeployerKeys, TempDeployerWallets, TypedWallet } from './types';
+import { DeployerKeys, DeployerWallets, TypedWallet } from './types';
 
-export function useTempDeployerWallets(
+/**
+ * Reads and decrypts any existing deployer keys
+ */
+export function useDeployerWallets() {
+  const { deployerKeys } = useStore((s) => ({
+    deployerKeys: s.deployerKeys,
+  }));
+  const { error, isLoading, data } = useQuery({
+    queryKey: ['getDeployerWallets', deployerKeys],
+    queryFn: () => getDeployerWallets(deployerKeys),
+    retry: false,
+  });
+
+  return {
+    isLoading,
+    error,
+    wallets: data || {},
+  };
+}
+
+/**
+ * Reads and decrypts any existing deployer keys
+ * or creates new ones if they don't exist
+ */
+export function useOrCreateDeployerWallets(
   protocols: ProtocolType[],
   onFailure?: (error: Error) => void,
 ) {
-  // const tempDeployerKeys = useStore((s) => s.tempDeployerKeys);
-  const { tempDeployerKeys, setDeployerKey } = useStore((s) => ({
-    tempDeployerKeys: s.tempDeployerKeys,
+  const { deployerKeys, setDeployerKey } = useStore((s) => ({
+    deployerKeys: s.deployerKeys,
     setDeployerKey: s.setDeployerKey,
   }));
   const { error, isLoading, data } = useQuery({
-    queryKey: ['getDeployerWallet', protocols, tempDeployerKeys, setDeployerKey],
-    queryFn: () => getOrCreateTempDeployerWallets(protocols, tempDeployerKeys, setDeployerKey),
+    queryKey: ['getOrCreateDeployerWallets', protocols, deployerKeys, setDeployerKey],
+    queryFn: () => getOrCreateDeployerWallets(protocols, deployerKeys, setDeployerKey),
     retry: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
   });
   useEffect(() => {
     if (error) {
@@ -40,108 +62,104 @@ export function useTempDeployerWallets(
   };
 }
 
-export function useRemoveTempDeployerWallet(protocols: ProtocolType[]) {
-  const removeDeployerKey = useStore((s) => s.removeDeployerKey);
-  return () => protocols.map((p) => removeDeployerKey(p));
+export function useRemoveDeployerWallet() {
+  return useStore((s) => s.removeDeployerKey);
 }
 
-async function getOrCreateTempDeployerWallets(
-  protocols: ProtocolType[],
-  encryptedKeys: TempDeployerKeys,
-  storeKey: (protocol: ProtocolType, key: string) => void,
-): Promise<TempDeployerWallets> {
-  const wallets: TempDeployerWallets = {};
+async function getDeployerWallets(encryptedKeys: DeployerKeys) {
+  const wallets: DeployerWallets = {};
+  for (const protocol of Object.values(ProtocolType)) {
+    try {
+      const encryptedKey = encryptedKeys[protocol];
+      if (!encryptedKey) continue;
+      logger.debug('Found deployer key in store for:', protocol);
+      const wallet = await decryptDeployerWallet(protocol, encryptedKey);
+      wallets[protocol] = wallet;
+    } catch (error) {
+      throw new Error(`Error reading deployer wallet for ${protocol}`, { cause: error });
+    }
+  }
+  return wallets;
+}
 
+async function getOrCreateDeployerWallets(
+  protocols: ProtocolType[],
+  encryptedKeys: DeployerKeys,
+  storeKey: (protocol: ProtocolType, key: string) => void,
+): Promise<DeployerWallets> {
+  const wallets: DeployerWallets = {};
   for (const protocol of protocols) {
     try {
       const encryptedKey = encryptedKeys[protocol];
       if (encryptedKey) {
         logger.debug('Found deployer key in store for:', protocol);
-        const wallet = await getTempDeployerWallet(protocol, encryptedKey);
+        const wallet = await decryptDeployerWallet(protocol, encryptedKey);
         wallets[protocol] = wallet;
       } else {
         logger.debug('No deployer key found in store for:', protocol);
-        const [wallet, encryptedKey] = await createTempDeployerWallet(protocol);
+        const [wallet, encryptedKey] = await createDeployerWallet(protocol);
         storeKey(protocol, encryptedKey);
         tryPersistBrowserStorage();
         wallets[protocol] = wallet;
       }
     } catch (error) {
-      throw new Error(`Error preparing temp deployer wallet for ${protocol}`, { cause: error });
+      throw new Error(`Error preparing deployer wallet for ${protocol}`, { cause: error });
     }
   }
-
   return wallets;
 }
 
 // TODO multi-protocol support
-async function createTempDeployerWallet(protocol: ProtocolType): Promise<[TypedWallet, string]> {
-  logger.info('Creating temp deployer wallet for:', protocol);
+async function createDeployerWallet(protocol: ProtocolType): Promise<[TypedWallet, string]> {
+  logger.info('Creating deployer wallet for:', protocol);
   let wallet: TypedWallet;
   let key: string;
   if (protocol === ProtocolType.Ethereum) {
-    const entropy = utils.randomBytes(32);
-    key = utils.entropyToMnemonic(entropy);
-    wallet = { type: ProviderType.EthersV5, wallet: Wallet.fromMnemonic(key) };
+    const ethersWallet = Wallet.createRandom();
+    wallet = {
+      type: ProviderType.EthersV5,
+      wallet: ethersWallet,
+      address: ethersWallet.address,
+      protocol,
+    };
+    key = ethersWallet.privateKey;
   } else {
-    throw new Error(`Unsupported protocol for temp deployer wallet: ${protocol}`);
+    throw new Error(`Unsupported protocol for deployer wallet: ${protocol}`);
   }
 
   const encryptedKey = await encryptString(
     key,
-    config.tempWalletEncryptionKey,
-    config.tempWalletEncryptionSalt,
+    config.deployerWalletEncryptionKey,
+    config.deployerWalletEncryptionSalt,
   );
   logger.info('Temp deployer wallet created for:', protocol);
   return [wallet, encryptedKey];
 }
 
 // TODO multi-protocol support
-async function getTempDeployerWallet(
+async function decryptDeployerWallet(
   protocol: ProtocolType,
   encryptedKey: string,
 ): Promise<TypedWallet> {
-  logger.debug('Instantiating temp deployer wallet from key for:', protocol);
+  logger.debug('Instantiating deployer wallet from key for:', protocol);
   const key = await decryptString(
     encryptedKey,
-    config.tempWalletEncryptionKey,
-    config.tempWalletEncryptionSalt,
+    config.deployerWalletEncryptionKey,
+    config.deployerWalletEncryptionSalt,
   );
   if (protocol === ProtocolType.Ethereum) {
-    const wallet = Wallet.fromMnemonic(key);
-    return { type: ProviderType.EthersV5, wallet };
+    const wallet = new Wallet(key);
+    return { type: ProviderType.EthersV5, wallet, address: wallet.address, protocol };
   } else {
-    throw new Error(`Unsupported protocol for temp deployer wallet: ${protocol}`);
+    throw new Error(`Unsupported protocol for deployer wallet: ${protocol}`);
   }
 }
 
 // TODO multi-protocol support
-export function getDeployerAddressForProtocol(
-  wallets: TempDeployerWallets,
-  protocol?: ProtocolType,
-) {
-  if (!protocol) return undefined;
-  const typedWallet = wallets[protocol];
-  if (!typedWallet) return undefined;
-  if (typedWallet.type === ProviderType.EthersV5) {
-    return typedWallet.wallet.address;
+export function getDeployerWalletKey(wallet: TypedWallet) {
+  if (wallet.type === ProviderType.EthersV5) {
+    return wallet.wallet.privateKey;
   } else {
-    throw new Error(`Unsupported wallet type for address: ${typedWallet.type}`);
-  }
-}
-
-function tryPersistBrowserStorage() {
-  // Request persistent storage for site
-  // This prevents browser from clearing local storage when space runs low. Rare but possible.
-  // Not a critical perm (and not supported in safari) so not blocking on this
-  if (navigator?.storage?.persist) {
-    navigator.storage
-      .persist()
-      .then((isPersisted) => {
-        logger.debug(`Is persisted storage granted: ${isPersisted}`);
-      })
-      .catch((reason) => {
-        logger.error('Error enabling storage persist setting', reason);
-      });
+    throw new Error(`Unsupported wallet type for address: ${wallet.type}`);
   }
 }

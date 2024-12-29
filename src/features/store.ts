@@ -8,7 +8,7 @@ import { config } from '../consts/config';
 import { CardPage } from '../flows/CardPage';
 import { logger } from '../utils/logger';
 import { assembleChainMetadata } from './chains/metadata';
-import type { TempDeployerKeys } from './deployerWallet/types';
+import type { DeployerKeys } from './deployerWallet/types';
 import {
   DeploymentConfig,
   DeploymentContext,
@@ -36,7 +36,7 @@ export interface AppState {
   }) => void;
 
   // Encrypted temp deployer keys
-  tempDeployerKeys: TempDeployerKeys;
+  deployerKeys: DeployerKeys;
   setDeployerKey: (protocol: ProtocolType, key: string) => void;
   removeDeployerKey: (protocol: ProtocolType) => void;
 
@@ -88,17 +88,17 @@ export const useStore = create<AppState>()(
       },
 
       // Encrypted deployer keys
-      tempDeployerKeys: {},
+      deployerKeys: {},
       setDeployerKey: (protocol: ProtocolType, key: string) => {
         logger.debug('Setting deployer key in store for:', protocol);
-        const tempDeployerKeys = { ...get().tempDeployerKeys, [protocol]: key };
-        set({ tempDeployerKeys });
+        const deployerKeys = { ...get().deployerKeys, [protocol]: key };
+        set({ deployerKeys });
       },
       removeDeployerKey: (protocol: ProtocolType) => {
         logger.debug('Removing deployer key in store for:', protocol);
-        const tempDeployerKeys = { ...get().tempDeployerKeys };
-        delete tempDeployerKeys[protocol];
-        set({ tempDeployerKeys });
+        const deployerKeys = { ...get().deployerKeys };
+        delete deployerKeys[protocol];
+        set({ deployerKeys });
       },
 
       // User history
@@ -157,7 +157,7 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         // fields to persist
         chainMetadataOverrides: state.chainMetadataOverrides,
-        tempDeployerKeys: state.tempDeployerKeys,
+        deployerKeys: state.deployerKeys,
         deployments: state.deployments,
       }),
       version: PERSIST_STATE_VERSION,

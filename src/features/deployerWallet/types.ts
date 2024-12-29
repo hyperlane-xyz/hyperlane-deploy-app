@@ -7,7 +7,7 @@ import type { Keypair as SolWeb3Wallet } from '@solana/web3.js';
 import { DirectSecp256k1HdWallet as CosmosWallet } from '@cosmjs/proto-signing';
 
 // A map of protocol to encrypted wallet key
-export type TempDeployerKeys = Partial<Record<ProtocolType, string>>;
+export type DeployerKeys = Partial<Record<ProtocolType, string>>;
 
 /**
  * Wallets with discriminated union of provider type
@@ -16,6 +16,8 @@ export type TempDeployerKeys = Partial<Record<ProtocolType, string>>;
 interface TypedWalletBase<T> {
   type: ProviderType;
   wallet: T;
+  address: Address;
+  protocol: ProtocolType;
 }
 
 export interface EthersV5Wallet extends TypedWalletBase<EV5Wallet> {
@@ -35,4 +37,4 @@ export interface CosmJsWallet extends TypedWalletBase<CosmosWallet> {
 
 export type TypedWallet = EthersV5Wallet | SolanaWeb3Wallet | CosmJsWallet;
 
-export type TempDeployerWallets = Partial<Record<ProtocolType, TypedWallet>>;
+export type DeployerWallets = Partial<Record<ProtocolType, TypedWallet>>;

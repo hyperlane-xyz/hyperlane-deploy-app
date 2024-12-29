@@ -1,5 +1,5 @@
 import { Button, Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SlideIn } from '../../../components/animation/SlideIn';
@@ -17,10 +17,7 @@ import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
 import { useRefundDeployerAccounts } from '../../deployerWallet/refund';
-import {
-  getDeployerAddressForProtocol,
-  useTempDeployerWallets,
-} from '../../deployerWallet/wallets';
+import { useOrCreateDeployerWallets } from '../../deployerWallet/wallets';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentStatus } from '../types';
 
@@ -84,16 +81,23 @@ function FundDeployerAccounts({
   const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
 
-  const chains = deploymentConfig?.chains || [];
-  const protocols = Array.from(new Set(chains.map((c) => multiProvider.getProtocol(c))));
+  const { chains, protocols } = useMemo(() => {
+    const chains = deploymentConfig?.chains || [];
+    const protocols = Array.from(new Set(chains.map((c) => multiProvider.getProtocol(c))));
+    return { chains, protocols };
+  }, [deploymentConfig, multiProvider]);
+
   const numChains = chains.length;
   const [currentChainIndex, setCurrentChainIndex] = useState(0);
   const currentChain = chains[currentChainIndex];
   const currentChainProtocol = multiProvider.getProtocol(currentChain);
   const currentChainDisplay = getChainDisplayName(multiProvider, currentChain, true);
 
-  const { wallets, isLoading: isDeployerLoading } = useTempDeployerWallets(protocols, onFailure);
-  const deployerAddress = getDeployerAddressForProtocol(wallets, currentChainProtocol);
+  const { wallets, isLoading: isDeployerLoading } = useOrCreateDeployerWallets(
+    protocols,
+    onFailure,
+  );
+  const deployerAddress = wallets[currentChainProtocol]?.address;
 
   const { isPending: isTxPending, triggerTransaction } = useFundDeployerAccount(
     currentChain,
