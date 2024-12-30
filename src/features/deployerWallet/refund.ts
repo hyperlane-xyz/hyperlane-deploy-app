@@ -25,7 +25,7 @@ export function useRefundDeployerAccounts(onSettled?: () => void) {
   const { wallets } = useDeployerWallets();
   const { accounts } = useAccounts(multiProvider);
 
-  const { error, mutate, mutateAsync, submittedAt, isIdle, isPending } = useMutation({
+  const { error, mutate, isIdle, isPending } = useMutation({
     mutationKey: ['refundDeployerAccounts', chains, wallets, accounts],
     mutationFn: () => refundDeployerAccounts(chains, wallets, multiProvider, accounts),
     retry: false,
@@ -39,9 +39,7 @@ export function useRefundDeployerAccounts(onSettled?: () => void) {
 
   return {
     refund: mutate,
-    refundAsync: mutateAsync,
     isIdle,
-    hasRun: !!submittedAt,
     isPending,
   };
 }

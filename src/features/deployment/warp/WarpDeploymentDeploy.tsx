@@ -1,5 +1,6 @@
+import { errorToString } from '@hyperlane-xyz/utils';
 import { Button, Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SlideIn } from '../../../components/animation/SlideIn';
@@ -12,7 +13,7 @@ import { WARP_DEPLOY_GAS_UNITS } from '../../../consts/consts';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
 import { Color } from '../../../styles/Color';
-import { useThrottle } from '../../../utils/useThrottle';
+import { useMutationOnMount } from '../../../utils/useMutationOnMount';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
@@ -20,6 +21,7 @@ import { useRefundDeployerAccounts } from '../../deployerWallet/refund';
 import { useOrCreateDeployerWallets } from '../../deployerWallet/wallets';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentStatus } from '../types';
+import { useWarpDeployment } from './deploy';
 
 enum DeployStep {
   FundDeployer,
@@ -51,9 +53,18 @@ function MainSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployS
     setStep(DeployStep.ExecuteDeploy);
   };
 
+  const onDeploymentSuccess = () => {
+    setPage(CardPage.WarpSuccess);
+  };
+
+  const onCancelSettled = () => {
+    setPage(CardPage.WarpForm);
+  };
+
   const onFailure = (error: Error) => {
     // TODO carry error over via store state
-    toast.error(error.message);
+    const errorMsg = errorToString(error, 150);
+    toast.error(errorMsg);
     setPage(CardPage.WarpFailure);
   };
 
@@ -63,9 +74,11 @@ function MainSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployS
         {step === DeployStep.FundDeployer && (
           <FundDeployerAccounts onSuccess={onDeployerFunded} onFailure={onFailure} />
         )}
-        {step === DeployStep.ExecuteDeploy && <ExecuteDeploy />}
+        {step === DeployStep.ExecuteDeploy && (
+          <ExecuteDeploy onSuccess={onDeploymentSuccess} onFailure={onFailure} />
+        )}
         {step === DeployStep.AddFunds && <FundSingleDeployerAccount />}
-        {step === DeployStep.CancelDeploy && <CancelDeploy />}
+        {step === DeployStep.CancelDeploy && <CancelDeploy onSettled={onCancelSettled} />}
       </SlideIn>
     </div>
   );
@@ -160,11 +173,20 @@ function FundIcon({ color }: { color: string }) {
   );
 }
 
-function ExecuteDeploy() {
+function ExecuteDeploy({
+  onSuccess,
+  onFailure,
+}: {
+  onSuccess: () => void;
+  onFailure: (error: Error) => void;
+}) {
   const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
   const chains = deploymentConfig?.chains || [];
   const chainListString = chains.map((c) => getChainDisplayName(multiProvider, c, true)).join(', ');
+
+  const { deploy, isIdle } = useWarpDeployment(deploymentConfig, onSuccess, onFailure);
+  useMutationOnMount(isIdle, deploy);
 
   const { isOpen, open, close } = useModal();
   const onClickViewLogs = () => {
@@ -193,14 +215,9 @@ function ExecuteDeploy() {
   );
 }
 
-function CancelDeploy() {
-  const { setPage } = useCardNav();
-  const onSettled = () => setPage(CardPage.WarpForm);
+function CancelDeploy({ onSettled }: { onSettled: () => void }) {
   const { refund, isIdle } = useRefundDeployerAccounts(onSettled);
-  const throttledRefund = useThrottle(refund, 10_000);
-  useEffect(() => {
-    if (isIdle) throttledRefund();
-  }, [isIdle, throttledRefund]);
+  useMutationOnMount(isIdle, refund);
 
   return (
     <div className="flex flex-col items-center space-y-7">
