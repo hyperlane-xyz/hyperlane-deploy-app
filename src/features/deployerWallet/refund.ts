@@ -13,7 +13,7 @@ import { REFUND_FEE_PADDING_FACTOR } from '../../consts/consts';
 import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../chains/hooks';
 import { getChainDisplayName } from '../chains/utils';
-import { useDeploymentChains } from '../deployment/hooks';
+import { usePastDeploymentChains } from '../deployment/hooks';
 import { Balance, getDeployerBalances } from './balances';
 import { getTransferTx, sendTxFromWallet } from './transactions';
 import { DeployerWallets } from './types';
@@ -21,7 +21,7 @@ import { useDeployerWallets } from './wallets';
 
 export function useRefundDeployerAccounts(onSettled?: () => void) {
   const multiProvider = useMultiProvider();
-  const { chains } = useDeploymentChains();
+  const { chains } = usePastDeploymentChains();
   const { wallets } = useDeployerWallets();
   const { accounts } = useAccounts(multiProvider);
 

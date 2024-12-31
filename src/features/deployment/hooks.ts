@@ -35,7 +35,7 @@ export function useDeploymentHistory() {
   };
 }
 
-export function useDeploymentChains() {
+export function usePastDeploymentChains() {
   const multiProvider = useMultiProvider();
   const { deployments } = useDeploymentHistory();
   return useMemo<{ chains: ChainName[]; protocols: ProtocolType[] }>(() => {

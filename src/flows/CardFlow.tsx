@@ -21,7 +21,7 @@ const PAGE_TO_COMPONENT: Record<CardPage, React.FC> = {
   [CardPage.WarpFailure]: WarpDeploymentFailure,
 };
 
-// TODO instead of this somewhat custom approach, a more idiomatic approach would be to
+// TODO instead of this card-based navigation, a more idiomatic approach would be to
 // migrate the app to the AppRouter structure and then use pages instead of CardNav.
 // But animations may be more difficult and the AppRouter is tricky for SPAs.
 export function CardFlow() {

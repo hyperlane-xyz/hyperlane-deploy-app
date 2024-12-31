@@ -3,7 +3,7 @@ import { ProtocolType } from '@hyperlane-xyz/utils';
 import { useQuery } from '@tanstack/react-query';
 import { logger } from '../../utils/logger';
 import { useMultiProvider } from '../chains/hooks';
-import { useDeploymentChains } from '../deployment/hooks';
+import { usePastDeploymentChains } from '../deployment/hooks';
 import { DeployerWallets } from './types';
 
 export interface Balance {
@@ -15,7 +15,7 @@ export interface Balance {
 
 export function useDeployerBalances(wallets: DeployerWallets) {
   const multiProvider = useMultiProvider();
-  const { chains } = useDeploymentChains();
+  const { chains } = usePastDeploymentChains();
 
   const { data, isFetching, refetch } = useQuery({
     // MultiProvider cannot be used here because it's not serializable

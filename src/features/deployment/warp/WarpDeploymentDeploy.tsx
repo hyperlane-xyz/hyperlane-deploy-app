@@ -1,3 +1,4 @@
+import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { Button, Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import { useMemo, useState } from 'react';
@@ -13,14 +14,13 @@ import { WARP_DEPLOY_GAS_UNITS } from '../../../consts/consts';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
 import { Color } from '../../../styles/Color';
-import { useMutationOnMount } from '../../../utils/useMutationOnMount';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
 import { useRefundDeployerAccounts } from '../../deployerWallet/refund';
 import { useOrCreateDeployerWallets } from '../../deployerWallet/wallets';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
-import { DeploymentStatus } from '../types';
+import { DeploymentStatus, WarpDeploymentConfig } from '../types';
 import { useWarpDeployment } from './deploy';
 
 enum DeployStep {
@@ -35,31 +35,17 @@ export function WarpDeploymentDeploy() {
 
   return (
     <div className="flex w-full flex-col items-center space-y-4 py-2 xs:min-w-100">
-      <HeaderSection />
-      <MainSection step={step} setStep={setStep} />
-      <ButtonSection step={step} setStep={setStep} />
+      <H1 className="text-center">Deploying Warp Route</H1>
+      <Deployment step={step} setStep={setStep} />
+      <CancelButton step={step} setStep={setStep} />
     </div>
   );
 }
 
-function HeaderSection() {
-  return <H1 className="text-center">Deploying Warp Route</H1>;
-}
-
-function MainSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployStep) => void }) {
+function Deployment({ step, setStep }: { step: DeployStep; setStep: (s: DeployStep) => void }) {
+  const multiProvider = useMultiProvider();
+  const { deploymentConfig } = useWarpDeploymentConfig();
   const { setPage } = useCardNav();
-
-  const onDeployerFunded = () => {
-    setStep(DeployStep.ExecuteDeploy);
-  };
-
-  const onDeploymentSuccess = () => {
-    setPage(CardPage.WarpSuccess);
-  };
-
-  const onCancelSettled = () => {
-    setPage(CardPage.WarpForm);
-  };
 
   const onFailure = (error: Error) => {
     // TODO carry error over via store state
@@ -68,32 +54,51 @@ function MainSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployS
     setPage(CardPage.WarpFailure);
   };
 
+  const onDeploymentSuccess = () => {
+    setPage(CardPage.WarpSuccess);
+  };
+
+  const { deploy, isIdle } = useWarpDeployment(deploymentConfig, onDeploymentSuccess, onFailure);
+
+  const onDeployerFunded = () => {
+    setStep(DeployStep.ExecuteDeploy);
+    if (isIdle) deploy();
+  };
+
+  if (!deploymentConfig) throw new Error('Deployment config is required');
+
   return (
     <div className="flex grow flex-col items-center justify-center space-y-3 sm:min-h-[18rem]">
       <SlideIn motionKey={step} direction="forward">
         {step === DeployStep.FundDeployer && (
-          <FundDeployerAccounts onSuccess={onDeployerFunded} onFailure={onFailure} />
+          <FundDeployerAccounts
+            multiProvider={multiProvider}
+            deploymentConfig={deploymentConfig}
+            onSuccess={onDeployerFunded}
+            onFailure={onFailure}
+          />
         )}
         {step === DeployStep.ExecuteDeploy && (
-          <ExecuteDeploy onSuccess={onDeploymentSuccess} onFailure={onFailure} />
+          <ExecuteDeploy multiProvider={multiProvider} deploymentConfig={deploymentConfig} />
         )}
         {step === DeployStep.AddFunds && <FundSingleDeployerAccount />}
-        {step === DeployStep.CancelDeploy && <CancelDeploy onSettled={onCancelSettled} />}
+        {step === DeployStep.CancelDeploy && <CancelDeploy />}
       </SlideIn>
     </div>
   );
 }
 
 function FundDeployerAccounts({
+  multiProvider,
+  deploymentConfig,
   onSuccess,
   onFailure,
 }: {
+  multiProvider: MultiProtocolProvider;
+  deploymentConfig: WarpDeploymentConfig;
   onSuccess: () => void;
   onFailure: (error: Error) => void;
 }) {
-  const multiProvider = useMultiProvider();
-  const { deploymentConfig } = useWarpDeploymentConfig();
-
   const { chains, protocols } = useMemo(() => {
     const chains = deploymentConfig?.chains || [];
     const protocols = Array.from(new Set(chains.map((c) => multiProvider.getProtocol(c))));
@@ -174,19 +179,14 @@ function FundIcon({ color }: { color: string }) {
 }
 
 function ExecuteDeploy({
-  onSuccess,
-  onFailure,
+  multiProvider,
+  deploymentConfig,
 }: {
-  onSuccess: () => void;
-  onFailure: (error: Error) => void;
+  multiProvider: MultiProtocolProvider;
+  deploymentConfig: WarpDeploymentConfig;
 }) {
-  const multiProvider = useMultiProvider();
-  const { deploymentConfig } = useWarpDeploymentConfig();
   const chains = deploymentConfig?.chains || [];
   const chainListString = chains.map((c) => getChainDisplayName(multiProvider, c, true)).join(', ');
-
-  const { deploy, isIdle } = useWarpDeployment(deploymentConfig, onSuccess, onFailure);
-  useMutationOnMount(isIdle, deploy);
 
   const { isOpen, open, close } = useModal();
   const onClickViewLogs = () => {
@@ -215,10 +215,7 @@ function ExecuteDeploy({
   );
 }
 
-function CancelDeploy({ onSettled }: { onSettled: () => void }) {
-  const { refund, isIdle } = useRefundDeployerAccounts(onSettled);
-  useMutationOnMount(isIdle, refund);
-
+function CancelDeploy() {
   return (
     <div className="flex flex-col items-center space-y-7">
       <SpinnerIcon width={70} height={70} color={Color.primary['500']} />
@@ -230,11 +227,18 @@ function CancelDeploy({ onSettled }: { onSettled: () => void }) {
   );
 }
 
-function ButtonSection({ step, setStep }: { step: DeployStep; setStep: (s: DeployStep) => void }) {
+function CancelButton({ step, setStep }: { step: DeployStep; setStep: (s: DeployStep) => void }) {
   const { updateDeploymentStatus, currentIndex } = useDeploymentHistory();
+
+  const { setPage } = useCardNav();
+  const { refund, isIdle } = useRefundDeployerAccounts(() => {
+    setPage(CardPage.WarpForm);
+  });
+
   const onClickCancel = () => {
     updateDeploymentStatus(currentIndex, DeploymentStatus.Cancelled);
     setStep(DeployStep.CancelDeploy);
+    if (isIdle) refund();
   };
 
   return (

@@ -28,6 +28,7 @@ export interface DeploymentContext {
   result?: DeploymentResult;
 }
 
+// A discriminated union wrapper for the SDK's deployment config shapes
 interface ConfigBase {
   type: DeploymentType;
   config: unknown;

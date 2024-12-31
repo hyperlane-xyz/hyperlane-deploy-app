@@ -1,38 +1,23 @@
 import {
+  CollateralTokenConfigSchema,
   EvmTokenAdapter,
+  HypTokenRouterConfig,
   MultiProtocolProvider,
-  TokenRouterConfig,
+  NativeTokenConfigSchema,
+  TokenMetadata,
   TokenType,
 } from '@hyperlane-xyz/sdk';
 import { assert } from '@hyperlane-xyz/utils';
 import { WarpDeploymentConfigItem } from './types';
 
-// TODO remove (see below)
-const collateralTokenTypes = [
-  TokenType.collateral,
-  TokenType.collateralVault,
-  TokenType.collateralVaultRebase,
-  TokenType.XERC20,
-  TokenType.XERC20Lockbox,
-  TokenType.collateralFiat,
-  TokenType.fastCollateral,
-  TokenType.collateralUri,
-];
-
-const nativeTokenTypes = [TokenType.native, TokenType.nativeScaled];
-
 export function isCollateralTokenType(tokenType: TokenType) {
-  // TODO use this when SDK is updated
   // any cast required because the config schema has a narrowed type
-  // return CollateralConfigSchema.shape.type.options.includes(tokenType as any);
-  return collateralTokenTypes.includes(tokenType);
+  return CollateralTokenConfigSchema.shape.type.options.includes(tokenType as any);
 }
 
 export function isNativeTokenType(tokenType: TokenType) {
-  // TODO use this when SDK is updated
   // any cast required because the config schema has a narrowed type
-  // return NativeConfigSchema.shape.type.options.includes(tokenType as any);
-  return nativeTokenTypes.includes(tokenType);
+  return NativeTokenConfigSchema.shape.type.options.includes(tokenType as any);
 }
 
 export function isSyntheticTokenType(tokenType: TokenType) {
@@ -41,23 +26,21 @@ export function isSyntheticTokenType(tokenType: TokenType) {
 
 export function formItemToDeployConfig(
   config: WarpDeploymentConfigItem,
-  // TODO use meta type when SDK is updated
-  tokenMetadata: any,
-): TokenRouterConfig {
+  tokenMetadata: TokenMetadata,
+): HypTokenRouterConfig {
   const { tokenType, tokenAddress } = config;
   return {
     type: tokenType,
     token: tokenAddress,
     ...tokenMetadata,
-  };
+  } as HypTokenRouterConfig;
 }
 
 // Consider caching results here for faster form validation
 export function getTokenMetadata(
   config: WarpDeploymentConfigItem,
   multiProvider: MultiProtocolProvider,
-  // TODO add type when SDK is updated
-) {
+): Promise<TokenMetadata> | undefined {
   const { chainName, tokenType, tokenAddress } = config;
   if (isCollateralTokenType(tokenType)) {
     assert(tokenAddress, 'Collateral token address is required');
@@ -66,9 +49,9 @@ export function getTokenMetadata(
     });
     return adapter.getMetadata();
   } else if (isNativeTokenType(tokenType)) {
-    const chainMetadata = multiProvider.getChainMetadata(chainName);
-    assert(chainMetadata.nativeToken, 'Native token metadata missing for chain');
-    return chainMetadata.nativeToken;
+    const { nativeToken } = multiProvider.getChainMetadata(chainName);
+    assert(nativeToken, 'Native token metadata missing for chain');
+    return Promise.resolve({ ...nativeToken, totalSupply: 0 });
   } else {
     return undefined;
   }

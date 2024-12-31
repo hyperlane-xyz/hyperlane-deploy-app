@@ -1,9 +1,10 @@
 import { chainAddresses } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
+  HypTokenRouterConfig,
   MultiProtocolProvider,
   Token,
-  TokenRouterConfig,
+  TokenMetadata,
   WarpRouteDeployConfig,
   WarpRouteDeployConfigSchema,
 } from '@hyperlane-xyz/sdk';
@@ -98,7 +99,7 @@ export async function validateWarpDeploymentForm(
 async function validateChainTokenConfig(
   config: WarpDeploymentConfigItem,
   multiProvider: MultiProtocolProvider,
-): Promise<Result<TokenRouterConfig>> {
+): Promise<Result<HypTokenRouterConfig>> {
   const { chainName, tokenType, tokenAddress } = config;
   if (!chainName) return failure('Chain is required');
   if (!tokenType) return failure('Token type is required');
@@ -111,8 +112,7 @@ async function validateChainTokenConfig(
     if (!chainMetadata.nativeToken) return failure('Native token metadata missing for chain');
   }
 
-  // TODO import TokenMetadata type from SDK when it's updated
-  let tokenMetadata: any = undefined;
+  let tokenMetadata: TokenMetadata | undefined = undefined;
   try {
     tokenMetadata = await getTokenMetadata(config, multiProvider);
   } catch (error) {
@@ -120,22 +120,22 @@ async function validateChainTokenConfig(
     return failure('Address is not a valid token contract');
   }
 
-  const deployConfig: TokenRouterConfig = {
+  const deployConfig = {
     type: tokenType,
     token: tokenAddress,
     ...tokenMetadata,
-  };
+  } as HypTokenRouterConfig;
 
   return success(deployConfig);
 }
 
 function assembleWarpConfig(
   chainNames: ChainName[],
-  routerConfigs: TokenRouterConfig[],
+  routerConfigs: HypTokenRouterConfig[],
   accounts: Record<ProtocolType, AccountInfo>,
   multiProvider: MultiProtocolProvider,
 ): Result<WarpRouteDeployConfig> {
-  let warpRouteDeployConfig: ChainMap<TokenRouterConfig> = chainNames.reduce(
+  let warpRouteDeployConfig: ChainMap<HypTokenRouterConfig> = chainNames.reduce(
     (acc, chainName, index) => {
       const owner = getAccountAddressForChain(multiProvider, chainName, accounts);
       acc[chainName] = {
