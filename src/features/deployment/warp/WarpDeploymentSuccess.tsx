@@ -6,7 +6,7 @@ import { A } from '../../../components/text/A';
 import { H1, H2 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
 import { Color } from '../../../styles/Color';
-import { useWarpDeploymentConfig } from '../hooks';
+import { useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
 import { tryCopyConfig } from '../utils';
 
 export function WarpDeploymentSuccess() {
@@ -14,9 +14,8 @@ export function WarpDeploymentSuccess() {
   const firstOwner = Object.values(deploymentConfig?.config || {})[0]?.owner;
   const firstOwnerDisplay = firstOwner ? ` (${shortenAddress(firstOwner)})` : '';
 
-  const onClickCopyConfig = () => {
-    tryCopyConfig(deploymentConfig);
-  };
+  const deploymentContext = useLatestDeployment();
+  const onClickCopyConfig = () => tryCopyConfig(deploymentContext?.result?.result);
 
   return (
     <div className="flex w-full flex-col items-center space-y-4 py-2 text-md">

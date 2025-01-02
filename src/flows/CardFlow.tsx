@@ -10,7 +10,7 @@ import { useCardNav } from './hooks';
 
 // Useful for development, do not use in production
 const FORCE_PAGE = undefined;
-// const FORCE_PAGE = CardPage.WarpFailure;
+// const FORCE_PAGE = CardPage.WarpSuccess;
 
 const PAGE_TO_COMPONENT: Record<CardPage, React.FC> = {
   [CardPage.Landing]: LandingPage,

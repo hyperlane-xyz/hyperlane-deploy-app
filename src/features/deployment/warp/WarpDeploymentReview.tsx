@@ -157,9 +157,7 @@ function ConfigLabelAndValue({
 function InfoSection() {
   const { deploymentConfig } = useWarpDeploymentConfig();
 
-  const onClickCopy = () => {
-    tryCopyConfig(deploymentConfig);
-  };
+  const onClickCopy = () => tryCopyConfig(deploymentConfig?.config);
 
   return (
     <div className="flex items-center gap-2.5 rounded-lg bg-blue-500/5 px-3 py-2">

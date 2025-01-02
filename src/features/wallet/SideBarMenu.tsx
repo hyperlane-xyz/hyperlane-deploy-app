@@ -33,13 +33,13 @@ export function SideBarMenu({
   return (
     <>
       <div
-        className={`fixed right-0 top-0 h-full w-88 transform bg-white bg-opacity-95 shadow-lg transition-transform duration-100 ease-in ${
+        className={`fixed right-0 top-0 h-full w-88 transform bg-white shadow-lg transition-transform duration-100 ease-in ${
           isOpen ? 'z-10 translate-x-0' : 'z-0 translate-x-full'
         }`}
       >
         {isOpen && (
           <button
-            className="absolute left-0 top-0 flex h-full w-9 -translate-x-full items-center justify-center rounded-l-md bg-white bg-opacity-60 transition-all hover:bg-opacity-80"
+            className="absolute left-0 top-0 flex h-full w-9 -translate-x-full items-center justify-center rounded-l-md bg-white bg-opacity-70 transition-all hover:bg-opacity-80"
             onClick={() => onClose()}
           >
             <Image src={CollapseIcon} width={15} height={24} alt="" />

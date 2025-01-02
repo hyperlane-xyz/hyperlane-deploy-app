@@ -20,8 +20,8 @@ import {
   HyperlaneContractsMap,
   HyperlaneProxyFactoryDeployer,
   IsmConfig,
-  MultiProtocolProvider,
   MultiProvider,
+  ProviderType,
   TOKEN_TYPE_TO_STANDARD,
   TokenFactories,
   WarpCoreConfig,
@@ -31,35 +31,64 @@ import {
   isTokenMetadata,
 } from '@hyperlane-xyz/sdk';
 import { Address, ProtocolType, assert, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
+import { useCallback, useMemo, useState } from 'react';
 
 export function useWarpDeployment(
   deploymentConfig?: WarpDeploymentConfig,
   onSuccess?: (config: WarpCoreConfig) => void,
   onFailure?: (error: Error) => void,
 ) {
-  const multiProvider = useMultiProvider();
+  const [isCancelled, setIsCancelled] = useState(false);
+
+  const multiProtocolProvider = useMultiProvider();
+  const multiProvider = useMemo(
+    () => multiProtocolProvider.toMultiProvider(),
+    [multiProtocolProvider],
+  );
   const { wallets } = useDeployerWallets();
 
   const { error, mutate, isIdle, isPending } = useMutation({
     mutationKey: ['warpDeploy', deploymentConfig, wallets],
-    mutationFn: () => executeDeploy(multiProvider, wallets, deploymentConfig),
+    mutationFn: () => {
+      setIsCancelled(false);
+      return executeDeploy(multiProvider, wallets, deploymentConfig);
+    },
     retry: false,
-    onError: onFailure,
-    onSuccess,
+    onError: (e: Error) => {
+      if (!isCancelled) onFailure?.(e);
+    },
+    onSuccess: (r: WarpCoreConfig) => {
+      if (!isCancelled) onSuccess?.(r);
+    },
   });
 
-  useToastError(error, 'Error deploying warp route.');
+  useToastError(!isCancelled && error, 'Error deploying warp route.');
+
+  const cancel = useCallback(() => {
+    if (!isPending) return;
+    setIsCancelled(true);
+    logger.debug('Cancelling deployment');
+    // Clear signers from multiProvider to force a failure of the
+    // next tx from the deployers
+    multiProvider.setSharedSigner(null);
+
+    // multiProvider is intentionally excluded from the deps array
+    // to ensure that this cancel callback remains bound to the
+    // one used in the active deployment
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending]);
 
   return {
     deploy: mutate,
     isIdle,
     isPending,
+    cancel,
   };
 }
 
 // TODO multi-protocol support
 export async function executeDeploy(
-  multiProtocolProvider: MultiProtocolProvider,
+  multiProvider: MultiProvider,
   wallets: DeployerWallets,
   typedConfig?: WarpDeploymentConfig,
 ): Promise<WarpCoreConfig> {
@@ -67,8 +96,9 @@ export async function executeDeploy(
   logger.info('Executing warp route deployment');
 
   const deploymentConfig = typedConfig.config;
-  const multiProvider = multiProtocolProvider.toMultiProvider();
-  // TODO connect wallets to MP
+  const evmWallet = wallets[ProtocolType.Ethereum];
+  assert(evmWallet?.type === ProviderType.EthersV5, 'EVM wallet is required for deployment');
+  multiProvider.setSharedSigner(evmWallet.wallet);
 
   const deployer = new HypERC20Deployer(multiProvider);
 

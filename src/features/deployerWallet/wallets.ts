@@ -18,7 +18,7 @@ export function useDeployerWallets() {
   const { deployerKeys } = useStore((s) => ({
     deployerKeys: s.deployerKeys,
   }));
-  const { error, isLoading, data } = useQuery({
+  const { error, isLoading, data, refetch } = useQuery({
     queryKey: ['getDeployerWallets', deployerKeys],
     queryFn: () => getDeployerWallets(deployerKeys),
     retry: false,
@@ -28,6 +28,7 @@ export function useDeployerWallets() {
     isLoading,
     error,
     wallets: data || {},
+    refetch,
   };
 }
 
@@ -43,7 +44,7 @@ export function useOrCreateDeployerWallets(
     deployerKeys: s.deployerKeys,
     setDeployerKey: s.setDeployerKey,
   }));
-  const { error, isLoading, data } = useQuery({
+  const { error, isLoading, data, refetch } = useQuery({
     queryKey: ['getOrCreateDeployerWallets', protocols, deployerKeys, setDeployerKey],
     queryFn: () => getOrCreateDeployerWallets(protocols, deployerKeys, setDeployerKey),
     retry: false,
@@ -59,6 +60,7 @@ export function useOrCreateDeployerWallets(
     isLoading,
     error,
     wallets: data || {},
+    refetch,
   };
 }
 
@@ -156,10 +158,10 @@ async function decryptDeployerWallet(
 }
 
 // TODO multi-protocol support
-export function getDeployerWalletKey(wallet: TypedWallet) {
-  if (wallet.type === ProviderType.EthersV5) {
-    return wallet.wallet.privateKey;
+export function getDeployerWalletKey({ wallet, type }: TypedWallet) {
+  if (type === ProviderType.EthersV5) {
+    return wallet.privateKey;
   } else {
-    throw new Error(`Unsupported wallet type for address: ${wallet.type}`);
+    throw new Error(`Unsupported wallet type: ${type}`);
   }
 }

@@ -28,11 +28,17 @@ export function useDeploymentHistory() {
     deployments: s.deployments,
     addDeployment: s.addDeployment,
     updateDeploymentStatus: s.updateDeploymentStatus,
+    completeDeployment: s.completeDeployment,
   }));
   return {
     ...state,
     currentIndex: state.deployments.length - 1,
   };
+}
+
+export function useLatestDeployment() {
+  const { deployments, currentIndex } = useDeploymentHistory();
+  return deployments[currentIndex];
 }
 
 export function usePastDeploymentChains() {

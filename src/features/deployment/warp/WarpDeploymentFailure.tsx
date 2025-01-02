@@ -10,7 +10,6 @@ export function WarpDeploymentFailure() {
         dolorum asperiores hic molestias veniam, voluptatibus sit blanditiis eaque nostrum maxime.
         Et, voluptates. Nemo quas doloribus molestias?
       </p>
-      <div>TODO refund balances</div>
       <RestartButton />
     </div>
   );

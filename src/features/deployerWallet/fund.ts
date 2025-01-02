@@ -94,7 +94,7 @@ async function executeTransfer({
     });
     const txReceipt = await confirm();
     logger.debug(`Deployer funding tx confirmed on ${chainName}, hash: ${hash}`);
-    toastTxSuccess(`Deployer funded on ${chainName}!`, hash, origin);
+    toastTxSuccess(`Deployer funded on ${chainName}!`, hash, origin, 5_000);
     return txReceipt;
   } catch (error: any) {
     const errorDetails = error.message || error.toString();

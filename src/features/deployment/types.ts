@@ -59,7 +59,7 @@ export interface WarpDeploymentResult extends ResultBase {
 
 export interface CoreDeploymentResult extends ResultBase {
   type: DeploymentType.Core;
-  config: any; // TODO
+  result: any; // TODO
 }
 
 export type DeploymentResult = WarpDeploymentResult | CoreDeploymentResult;

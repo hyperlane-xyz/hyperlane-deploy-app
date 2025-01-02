@@ -12,6 +12,7 @@ import type { DeployerKeys } from './deployerWallet/types';
 import {
   DeploymentConfig,
   DeploymentContext,
+  DeploymentResult,
   DeploymentStatus,
   FinalDeploymentStatuses,
 } from './deployment/types';
@@ -44,6 +45,7 @@ export interface AppState {
   deployments: DeploymentContext[];
   addDeployment: (t: Omit<DeploymentContext, 'id' | 'timestamp'>) => void;
   updateDeploymentStatus: (i: number, s: DeploymentStatus) => void;
+  completeDeployment: (i: number, s: DeploymentResult) => void;
   cancelPendingDeployments: () => void;
 
   // Shared component state
@@ -113,9 +115,16 @@ export const useStore = create<AppState>()(
           if (i >= state.deployments.length) return state;
           const txs = [...state.deployments];
           txs[i].status = s;
-          return {
-            deployments: txs,
-          };
+          return { deployments: txs };
+        });
+      },
+      completeDeployment: (i, r) => {
+        set((state) => {
+          if (i >= state.deployments.length) return state;
+          const txs = [...state.deployments];
+          txs[i].result = r;
+          txs[i].status = DeploymentStatus.Complete;
+          return { deployments: txs };
         });
       },
       cancelPendingDeployments: () => {
