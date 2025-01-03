@@ -26,6 +26,7 @@ export interface DeploymentContext {
   status: DeploymentStatus;
   config: DeploymentConfig;
   result?: DeploymentResult;
+  error?: string;
 }
 
 // A discriminated union wrapper for the SDK's deployment config shapes

@@ -2,7 +2,6 @@ import { MultiProtocolProvider, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { errorToString, sleep } from '@hyperlane-xyz/utils';
 import { Button, Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import { useMemo, useState } from 'react';
-import { toast } from 'react-toastify';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SlideIn } from '../../../components/animation/SlideIn';
 import { SolidButton } from '../../../components/buttons/SolidButton';
@@ -39,16 +38,15 @@ export function WarpDeploymentDeploy() {
 
   const multiProvider = useMultiProvider();
   const { deploymentConfig } = useWarpDeploymentConfig();
-  const { updateDeploymentStatus, currentIndex, completeDeployment } = useDeploymentHistory();
+  const { updateDeploymentStatus, currentIndex, completeDeployment, failDeployment } =
+    useDeploymentHistory();
 
   const { refundAsync } = useRefundDeployerAccounts();
 
   const onFailure = (error: Error) => {
-    // TODO carry error over via store state
-    updateDeploymentStatus(currentIndex, DeploymentStatus.Failed);
-    const errorMsg = errorToString(error, 150);
-    toast.error(errorMsg);
-    setPage(CardPage.WarpFailure);
+    const errMsg = errorToString(error, 5000);
+    failDeployment(currentIndex, errMsg);
+    refundAsync().finally(() => setPage(CardPage.WarpFailure));
   };
 
   const onDeploymentSuccess = (config: WarpCoreConfig) => {

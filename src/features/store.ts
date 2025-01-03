@@ -45,7 +45,8 @@ export interface AppState {
   deployments: DeploymentContext[];
   addDeployment: (t: Omit<DeploymentContext, 'id' | 'timestamp'>) => void;
   updateDeploymentStatus: (i: number, s: DeploymentStatus) => void;
-  completeDeployment: (i: number, s: DeploymentResult) => void;
+  completeDeployment: (i: number, r: DeploymentResult) => void;
+  failDeployment: (i: number, e: string) => void;
   cancelPendingDeployments: () => void;
 
   // Shared component state
@@ -124,6 +125,15 @@ export const useStore = create<AppState>()(
           const txs = [...state.deployments];
           txs[i].result = r;
           txs[i].status = DeploymentStatus.Complete;
+          return { deployments: txs };
+        });
+      },
+      failDeployment: (i, e) => {
+        set((state) => {
+          if (i >= state.deployments.length) return state;
+          const txs = [...state.deployments];
+          txs[i].error = e;
+          txs[i].status = DeploymentStatus.Failed;
           return { deployments: txs };
         });
       },
