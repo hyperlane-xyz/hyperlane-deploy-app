@@ -16,13 +16,13 @@ import { Color } from '../../../styles/Color';
 import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
+import { DeploymentStatus } from '../types';
+import { tryCopyConfig } from '../utils';
 import { TokenTypeDescriptions } from './TokenTypeSelectField';
 import { isSyntheticTokenType } from './utils';
 
 // TODO move to widgets lib
 import InfoCircle from '../../../images/icons/info-circle.svg';
-import { DeploymentStatus } from '../types';
-import { tryCopyConfig } from '../utils';
 
 export function WarpDeploymentReview() {
   return (

@@ -1,45 +1,35 @@
 import { ChainMetadata, isRpcHealthy } from '@hyperlane-xyz/sdk';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FormWarningBanner } from '../../components/banner/FormWarningBanner';
 import { logger } from '../../utils/logger';
 import { ChainSelectListModal } from './ChainSelectModal';
 import { useMultiProvider } from './hooks';
 import { getChainDisplayName } from './utils';
 
-// TODO refactor away from origin/destination
-export function ChainConnectionWarning({
-  origin,
-  destination,
-}: {
-  origin: ChainName;
-  destination: ChainName;
-}) {
+export function ChainConnectionWarning({ chains }: { chains: ChainName[] }) {
   const multiProvider = useMultiProvider();
-  const originMetadata = multiProvider.getChainMetadata(origin);
-  const destinationMetadata = multiProvider.getChainMetadata(destination);
+  const chainMetadataList = useMemo(
+    () => chains.map((c) => multiProvider.getChainMetadata(c)),
+    [chains, multiProvider],
+  );
 
-  const { data } = useQuery({
-    queryKey: ['ChainConnectionWarning', originMetadata, destinationMetadata],
+  const { data: unhealthyChain } = useQuery({
+    queryKey: ['ChainConnectionWarning', chainMetadataList],
     queryFn: async () => {
-      const isOriginHealthy = await checkRpcHealth(originMetadata);
-      const isDestinationHealthy = await checkRpcHealth(destinationMetadata);
-      return { isOriginHealthy, isDestinationHealthy };
+      const results = await Promise.all(chainMetadataList.map(checkRpcHealth));
+      for (let i = 0; i < results.length; i++) {
+        // If it's healthy, ignore
+        if (results[i]) continue;
+        // Otherwise return the first unhealthy chain found
+        return chainMetadataList[i].name;
+      }
+      return null;
     },
     refetchInterval: 5000,
   });
 
-  const unhealthyChain =
-    data &&
-    ((!data.isOriginHealthy && originMetadata) ||
-      (!data.isDestinationHealthy && destinationMetadata) ||
-      undefined);
-
-  const displayName = getChainDisplayName(
-    multiProvider,
-    unhealthyChain?.name || originMetadata.name,
-    true,
-  );
+  const displayName = getChainDisplayName(multiProvider, unhealthyChain || '', true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -57,7 +47,7 @@ export function ChainConnectionWarning({
         isOpen={isModalOpen}
         close={() => setIsModalOpen(false)}
         onSelect={() => {}}
-        showChainDetails={unhealthyChain?.name}
+        showChainDetails={unhealthyChain || undefined}
       />
     </>
   );

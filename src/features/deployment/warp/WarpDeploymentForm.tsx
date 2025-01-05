@@ -239,15 +239,12 @@ function ButtonSection() {
 
 function WarningBanners() {
   const { values } = useFormikContext<WarpDeploymentFormValues>();
+  const chains = useMemo(() => values.configs.map((c) => c.chainName), [values]);
   return (
     // Max height to prevent double padding if multiple warnings are visible
     <div className="max-h-10">
-      {/* TODO check all chains */}
-      <ChainWalletWarning origin={values.configs[0].chainName} />
-      <ChainConnectionWarning
-        origin={values.configs[0].chainName}
-        destination={values.configs[1].chainName}
-      />
+      <ChainWalletWarning chains={chains} />
+      <ChainConnectionWarning chains={chains} />
     </div>
   );
 }

@@ -7,30 +7,32 @@ import { logger } from '../../utils/logger';
 import { useMultiProvider } from './hooks';
 import { getChainDisplayName } from './utils';
 
-// TODO refactor away from origin
-export function ChainWalletWarning({ origin }: { origin: ChainName }) {
+export function ChainWalletWarning({ chains }: { chains: ChainName[] }) {
   const multiProvider = useMultiProvider();
-
   const wallets = useWalletDetails();
   const connectFns = useConnectFns();
   const disconnectFns = useDisconnectFns();
 
   const { isVisible, chainDisplayName, walletWhitelist, connectFn, disconnectFn } = useMemo(() => {
-    const protocol = multiProvider.tryGetProtocol(origin);
-    const walletWhitelist = config.chainWalletWhitelists[origin]?.map((w) =>
-      w.trim().toLowerCase(),
-    );
-    if (!protocol || !walletWhitelist?.length)
-      return { isVisible: false, chainDisplayName: '', walletWhitelist: [] };
+    // Iterate through chains and surface first one with a wallet warning
+    for (const chain of chains) {
+      const protocol = multiProvider.tryGetProtocol(chain);
+      const walletWhitelist = config.chainWalletWhitelists[chain]?.map((w) =>
+        w.trim().toLowerCase(),
+      );
+      if (!protocol || !walletWhitelist?.length) continue;
 
-    const chainDisplayName = getChainDisplayName(multiProvider, origin, true);
-    const walletName = wallets[protocol]?.name?.trim()?.toLowerCase();
-    const connectFn = connectFns[protocol];
-    const disconnectFn = disconnectFns[protocol];
-    const isVisible = !!walletName && !walletWhitelist.includes(walletName);
+      const chainDisplayName = getChainDisplayName(multiProvider, chain, true);
+      const walletName = wallets[protocol]?.name?.trim()?.toLowerCase();
+      const connectFn = connectFns[protocol];
+      const disconnectFn = disconnectFns[protocol];
+      const isVisible = !!walletName && !walletWhitelist.includes(walletName);
+      return { isVisible, chainDisplayName, walletWhitelist, connectFn, disconnectFn };
+    }
 
-    return { isVisible, chainDisplayName, walletWhitelist, connectFn, disconnectFn };
-  }, [multiProvider, origin, wallets, connectFns, disconnectFns]);
+    // If no chains apply, return falsy default values
+    return { isVisible: false, chainDisplayName: '', walletWhitelist: [] };
+  }, [multiProvider, chains, wallets, connectFns, disconnectFns]);
 
   const onClickChange = () => {
     if (!connectFn || !disconnectFn) return;
