@@ -1,6 +1,6 @@
 import { MultiProtocolProvider, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { errorToString, sleep } from '@hyperlane-xyz/utils';
-import { Button, Modal, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
+import { Button, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import { useMemo, useState } from 'react';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SlideIn } from '../../../components/animation/SlideIn';
@@ -9,7 +9,6 @@ import { GasIcon } from '../../../components/icons/GasIcon';
 import { LogsIcon } from '../../../components/icons/LogsIcon';
 import { StopIcon } from '../../../components/icons/StopIcon';
 import { H1 } from '../../../components/text/Headers';
-import { config } from '../../../consts/config';
 import { WARP_DEPLOY_GAS_UNITS } from '../../../consts/consts';
 import { CardPage } from '../../../flows/CardPage';
 import { useCardNav } from '../../../flows/hooks';
@@ -19,11 +18,13 @@ import { getChainDisplayName } from '../../chains/utils';
 import { useFundDeployerAccount } from '../../deployerWallet/fund';
 import { useRefundDeployerAccounts } from '../../deployerWallet/refund';
 import { useOrCreateDeployerWallets } from '../../deployerWallet/wallets';
+import { LogModal } from '../../logs/LogModal';
+import { useSdkLogWatcher } from '../../logs/useSdkLogs';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentStatus, DeploymentType, WarpDeploymentConfig } from '../types';
 import { useWarpDeployment } from './deploy';
 
-const CANCEL_SLEEP_DELAY = config.isDevMode ? 5_000 : 10_000;
+const CANCEL_SLEEP_DELAY = 10_000;
 
 enum DeployStep {
   FundDeployer,
@@ -40,6 +41,8 @@ export function WarpDeploymentDeploy() {
   const { deploymentConfig } = useWarpDeploymentConfig();
   const { updateDeploymentStatus, currentIndex, completeDeployment, failDeployment } =
     useDeploymentHistory();
+
+  useSdkLogWatcher();
 
   const { refundAsync } = useRefundDeployerAccounts();
 
@@ -211,10 +214,6 @@ function ExecuteDeploy({
   const chainListString = chains.map((c) => getChainDisplayName(multiProvider, c, true)).join(', ');
 
   const { isOpen, open, close } = useModal();
-  const onClickViewLogs = () => {
-    // TODO get logs somehow
-    open();
-  };
 
   return (
     <div className="flex flex-col items-center text-center">
@@ -226,13 +225,11 @@ function ExecuteDeploy({
         <p className="text-gray-700">This will take a few minutes</p>
         {/* <p className="mt-3">TODO status text</p> */}
       </div>
-      <Button onClick={onClickViewLogs} className="mt-3 gap-2.5">
+      <Button onClick={open} className="mt-3 gap-2.5">
         <LogsIcon width={14} height={14} color={Color.accent['500']} />
         <span className="text-md text-accent-500">View deployment logs</span>
       </Button>
-      <Modal isOpen={isOpen} close={close} panelClassname="p-4">
-        <div>TODO logs here</div>
-      </Modal>
+      <LogModal isOpen={isOpen} close={close} />
     </div>
   );
 }
