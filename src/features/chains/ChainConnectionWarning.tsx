@@ -10,7 +10,8 @@ import { getChainDisplayName } from './utils';
 export function ChainConnectionWarning({ chains }: { chains: ChainName[] }) {
   const multiProvider = useMultiProvider();
   const chainMetadataList = useMemo(
-    () => chains.map((c) => multiProvider.getChainMetadata(c)),
+    () =>
+      chains.map((c) => (c ? multiProvider.tryGetChainMetadata(c) : undefined)).filter((c) => !!c),
     [chains, multiProvider],
   );
 

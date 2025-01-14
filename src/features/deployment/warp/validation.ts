@@ -73,10 +73,11 @@ export async function validateWarpDeploymentForm(
       return { form: warpRouteDeployConfigResult.error };
     }
 
-    const balanceResult = await validateAccountBalances(chainNames, accounts, multiProvider);
-    if (!balanceResult.success) {
-      return { form: balanceResult.error };
-    }
+    // TODO re-enable or move to later
+    // const balanceResult = await validateAccountBalances(chainNames, accounts, multiProvider);
+    // if (!balanceResult.success) {
+    //   return { form: balanceResult.error };
+    // }
 
     onSuccess({
       type: DeploymentType.Warp,
@@ -172,7 +173,8 @@ function assembleWarpConfig(
   return success(warpRouteConfigValidationResult.data);
 }
 
-async function validateAccountBalances(
+// TODO remove export
+export async function validateAccountBalances(
   chains: ChainName[],
   accounts: Record<ProtocolType, AccountInfo>,
   multiProvider: MultiProtocolProvider,
