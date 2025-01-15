@@ -52,7 +52,7 @@ export function WarpDeploymentSuccess() {
         </li>
       </ol>
 
-      <RestartButton />
+      <RestartButton className="pt-4" />
     </div>
   );
 }

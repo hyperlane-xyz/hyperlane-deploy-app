@@ -43,6 +43,10 @@ Text and shadows
   text-shadow: 0 0 #010101;
 }
 
+.text-xs-important * {
+  @apply text-xs !important;
+}
+
 /* 
 Scrollbar Overrides
 ===================

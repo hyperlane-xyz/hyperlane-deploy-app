@@ -1,6 +1,6 @@
 import { WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
 import { fromWeiRounded, isAddress, objLength } from '@hyperlane-xyz/utils';
-import { IconButton, PencilIcon } from '@hyperlane-xyz/widgets';
+import { IconButton, PencilIcon, SpinnerIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { BackButton } from '../../../components/buttons/BackButton';
@@ -23,6 +23,7 @@ import { isSyntheticTokenType } from './utils';
 
 // TODO move to widgets lib
 import InfoCircle from '../../../images/icons/info-circle.svg';
+import { useCheckAccountBalances } from './validation';
 
 export function WarpDeploymentReview() {
   return (
@@ -181,18 +182,27 @@ function InfoSection() {
 }
 
 function ButtonSection() {
+  const { isPending, checkBalances } = useCheckAccountBalances();
   const { deploymentConfig } = useWarpDeploymentConfig();
   const { addDeployment } = useDeploymentHistory();
   const { setPage } = useCardNav();
 
-  const onClickContinue = () => {
+  const onClickContinue = async () => {
     if (!deploymentConfig) return;
     // Re-validate config before proceeding in case edits broke something
-    const result = WarpRouteDeployConfigSchema.safeParse(deploymentConfig.config);
-    if (!result.success) {
+    const schemaResult = WarpRouteDeployConfigSchema.safeParse(deploymentConfig.config);
+    if (!schemaResult.success) {
       toast.error('Invalid config, please fix before deploying');
       return;
     }
+
+    const chainNames = deploymentConfig.chains;
+    const balanceResult = await checkBalances(chainNames);
+    if (!balanceResult?.success) {
+      toast.error(balanceResult.error);
+      return;
+    }
+
     addDeployment({
       status: DeploymentStatus.Configured,
       config: deploymentConfig,
@@ -204,8 +214,14 @@ function ButtonSection() {
     <div className="mt-4 flex items-center justify-between">
       <BackButton page={CardPage.WarpForm} />
       <SolidButton onClick={onClickContinue} className="gap-3 px-5 py-2" color="accent">
-        <span>Deploy</span>
-        <Image src={RocketIcon} width={14} height={14} alt="" />
+        {isPending ? (
+          <SpinnerIcon width={20} height={20} color={Color.white} className="mx-6" />
+        ) : (
+          <>
+            <span>Deploy</span>
+            <Image src={RocketIcon} width={14} height={14} alt="" />
+          </>
+        )}
       </SolidButton>
     </div>
   );

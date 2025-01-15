@@ -18,10 +18,13 @@ import {
   Result,
   success,
 } from '@hyperlane-xyz/utils';
-import { AccountInfo, getAccountAddressForChain } from '@hyperlane-xyz/widgets';
+import { AccountInfo, getAccountAddressForChain, useAccounts } from '@hyperlane-xyz/widgets';
+import { useMutation } from '@tanstack/react-query';
+import { useToastError } from '../../../components/toast/useToastError';
 import { MIN_CHAIN_BALANCE } from '../../../consts/consts';
 import { logger } from '../../../utils/logger';
 import { zodErrorToString } from '../../../utils/zod';
+import { useMultiProvider } from '../../chains/hooks';
 import { getChainDisplayName } from '../../chains/utils';
 import { DeploymentConfig, DeploymentType } from '../types';
 import { WarpDeploymentConfigItem, WarpDeploymentFormValues } from './types';
@@ -31,9 +34,6 @@ import {
   isNativeTokenType,
   isSyntheticTokenType,
 } from './utils';
-
-const insufficientFundsErrMsg = /insufficient.[funds|lamports]/i;
-const emptyAccountErrMsg = /AccountNotFound/i;
 
 export async function validateWarpDeploymentForm(
   { configs: formConfigs }: WarpDeploymentFormValues,
@@ -73,12 +73,6 @@ export async function validateWarpDeploymentForm(
       return { form: warpRouteDeployConfigResult.error };
     }
 
-    // TODO re-enable or move to later
-    // const balanceResult = await validateAccountBalances(chainNames, accounts, multiProvider);
-    // if (!balanceResult.success) {
-    //   return { form: balanceResult.error };
-    // }
-
     onSuccess({
       type: DeploymentType.Warp,
       config: warpRouteDeployConfigResult.data,
@@ -88,12 +82,7 @@ export async function validateWarpDeploymentForm(
     return {};
   } catch (error: any) {
     logger.error('Error validating form', error);
-    let errorMsg = errorToString(error, 100);
-    const fullError = `${errorMsg} ${error.message}`;
-    if (insufficientFundsErrMsg.test(fullError) || emptyAccountErrMsg.test(fullError)) {
-      errorMsg = 'Insufficient funds for gas fees';
-    }
-    return { form: errorMsg };
+    return { form: errorToString(error, 100) };
   }
 }
 
@@ -173,8 +162,25 @@ function assembleWarpConfig(
   return success(warpRouteConfigValidationResult.data);
 }
 
-// TODO remove export
-export async function validateAccountBalances(
+export function useCheckAccountBalances() {
+  const multiProvider = useMultiProvider();
+  const { accounts } = useAccounts(multiProvider);
+
+  const { isPending, mutateAsync, error } = useMutation({
+    mutationKey: ['checkAccountBalances', accounts],
+    mutationFn: (chains: ChainName[]) => checkAccountBalances(chains, accounts, multiProvider),
+  });
+
+  useToastError(error, 'Error checking account balances on deployment chains');
+
+  return {
+    checkBalances: mutateAsync,
+    isPending,
+    error,
+  };
+}
+
+async function checkAccountBalances(
   chains: ChainName[],
   accounts: Record<ProtocolType, AccountInfo>,
   multiProvider: MultiProtocolProvider,
@@ -184,7 +190,9 @@ export async function validateAccountBalances(
       const token = Token.FromChainMetadataNativeToken(multiProvider.getChainMetadata(chainName));
       const address = getAccountAddressForChain(multiProvider, chainName, accounts);
       if (!address) return false;
+      logger.debug('Fetching account balance on chain', chainName);
       const balance = await token.getBalance(multiProvider, address);
+      logger.debug('Account balance fetched', chainName, balance.amount);
       return balance.amount > MIN_CHAIN_BALANCE;
     }),
   );

@@ -10,14 +10,17 @@ export function LogModal({ isOpen, close }: { isOpen: boolean; close: () => void
   const filterLevelValue = getLevelValue(filterLevel);
 
   return (
-    <Modal isOpen={isOpen} close={close} panelClassname="p-4">
+    <Modal isOpen={isOpen} close={close} panelClassname="p-4 space-y-2 max-w-md">
       <H3 className="text-center">Deployment Logs</H3>
-      <SegmentedControl options={LOG_LEVELS} onChange={(l) => setFilterLevel(l!)} />
-      <ul className="list-none space-y-0.5 text-sm">
+      <div className="text-xs-important flex justify-center">
+        <SegmentedControl options={LOG_LEVELS} onChange={(l) => setFilterLevel(l!)} />
+      </div>
+      <ul className="list-none space-y-0.5 text-xs">
         {sdkLogs.map(([timestamp, level, message], i) =>
           getLevelValue(level) >= filterLevelValue ? (
-            <li className="nth-child(even):bg-blue-500/5" key={i}>
-              {new Date(timestamp).toLocaleTimeString()}: {message}
+            <li className="nth-child(even):bg-blue-500/5 space-x-1" key={i}>
+              <span className="text-gray-500">{new Date(timestamp).toLocaleTimeString()}:</span>
+              <span>{message}</span>
             </li>
           ) : null,
         )}

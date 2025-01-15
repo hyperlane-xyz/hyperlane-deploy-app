@@ -16,7 +16,7 @@ let logBuffer: Array<Log> = [];
 
 export function useSdkLogWatcher() {
   useEffect(() => {
-    // TODO confirm this line doesn't break the log watching
+    logBuffer = [];
     configureRootLogger(LogFormat.JSON, LogLevelWithOff.Debug);
     const onLog = (timestamp: number, level: LogLevel, ...args: any) => {
       const message = `${args}`.replaceAll('[object Object],', '').trim();
@@ -36,7 +36,6 @@ export function useSdkLogWatcher() {
       // Replace global rootLogger with new one
       // TODO this may not work since deployer files already got ran and bound to first rootLogger
       configureRootLogger(LogFormat.JSON, LogLevelWithOff.Debug);
-      logBuffer = [];
     };
   }, []);
 }
