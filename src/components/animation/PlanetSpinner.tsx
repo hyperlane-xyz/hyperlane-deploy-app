@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Planet1 from '../../images/illustrations/planet1.png';
 import Planet2 from '../../images/illustrations/planet2.png';
 
-export function PlanetSpinner() {
+export function PlanetSpinner({ size = 70 }: { size?: number }) {
   // Planet 2 animation:
   // These transform functions calculate the x and y position based on the angle
   const angle = useMotionValue(0);
@@ -25,13 +25,13 @@ export function PlanetSpinner() {
     >
       <Image
         src={Planet1}
-        width={80}
-        height={80}
+        width={size}
+        height={size}
         alt=""
         className="animate-[spin_70s_linear_infinite]"
       />
       <motion.div style={{ position: 'absolute', x: x, y: y }}>
-        <Image src={Planet2} width={22} height={22} alt="" />
+        <Image src={Planet2} width={size / 4} height={size / 4} alt="" />
       </motion.div>
     </div>
   );

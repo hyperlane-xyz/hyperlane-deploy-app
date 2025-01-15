@@ -1,6 +1,7 @@
 import { MultiProtocolProvider, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { errorToString, sleep } from '@hyperlane-xyz/utils';
 import { Button, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
+import clsx from 'clsx';
 import { useMemo, useState } from 'react';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SlideIn } from '../../../components/animation/SlideIn';
@@ -23,6 +24,7 @@ import { useSdkLogWatcher } from '../../logs/useSdkLogs';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentStatus, DeploymentType, WarpDeploymentConfig } from '../types';
 import { useWarpDeployment } from './deploy';
+import { WarpDeploymentProgressIndicator } from './WarpDeploymentProgressIndicator';
 
 const CANCEL_SLEEP_DELAY = 10_000;
 
@@ -89,7 +91,12 @@ export function WarpDeploymentDeploy() {
   if (!deploymentConfig) throw new Error('Deployment config is required');
 
   return (
-    <div className="flex w-full flex-col items-center space-y-4 py-2 xs:min-w-100">
+    <div
+      className={clsx(
+        'flex w-full flex-col items-center py-2 xs:min-w-100',
+        step === DeployStep.ExecuteDeploy ? 'space-y-3' : 'space-y-4',
+      )}
+    >
       <H1 className="text-center">Deploying Warp Route</H1>
       <div className="flex grow flex-col items-center justify-center sm:min-h-[18rem]">
         <SlideIn motionKey={step} direction="forward">
@@ -211,21 +218,20 @@ function ExecuteDeploy({
   deploymentConfig: WarpDeploymentConfig;
 }) {
   const chains = deploymentConfig?.chains || [];
-  const chainListString = chains.map((c) => getChainDisplayName(multiProvider, c, true)).join(', ');
 
   const { isOpen, open, close } = useModal();
 
   return (
-    <div className="flex flex-col items-center text-center">
+    <div className="flex flex-col items-center pb-1 text-center">
       <div className="flex justify-center">
         <PlanetSpinner />
       </div>
-      <div className="mt-3">
-        <p className="max-w-sm text-gray-700">{`Deploying to ${chainListString}`}</p>
-        <p className="text-gray-700">This will take a few minutes</p>
-        {/* <p className="mt-3">TODO status text</p> */}
-      </div>
-      <Button onClick={open} className="mt-3 gap-2.5">
+      <WarpDeploymentProgressIndicator
+        chains={chains}
+        multiProvider={multiProvider}
+        className="mt-3"
+      />
+      <Button onClick={open} className="mt-5 gap-2.5">
         <LogsIcon width={14} height={14} color={Color.accent['500']} />
         <span className="text-md text-accent-500">View deployment logs</span>
       </Button>

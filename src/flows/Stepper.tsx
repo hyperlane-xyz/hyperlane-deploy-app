@@ -1,17 +1,40 @@
 import clsx from 'clsx';
 
-export function Stepper({ numSteps, currentStep }: { numSteps: number; currentStep: number }) {
+export function Stepper({
+  numSteps,
+  currentStep,
+  size = 6,
+  pulse = false,
+  className,
+}: {
+  numSteps: number;
+  currentStep: number;
+  size?: number;
+  pulse?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="flex items-center gap-1.5">
-      {Array.from({ length: numSteps }, (_, i) => i + 1).map((i) => (
-        <div
-          key={i}
-          className={clsx(
-            'h-1.5 w-1.5 rounded-full',
-            i === currentStep ? 'h-2.5 w-2.5 bg-primary-300' : 'bg-blue-200',
-          )}
-        />
-      ))}
+    <div
+      style={{ gap: size }}
+      className={clsx('flex flex-wrap items-center justify-center', className)}
+    >
+      {Array.from({ length: numSteps }, (_, i) => i + 1).map((i) => {
+        const isCurrent = i === currentStep;
+        return (
+          <div
+            key={i}
+            style={{
+              height: isCurrent ? Math.round(size * 1.6) : size,
+              width: isCurrent ? Math.round(size * 1.6) : size,
+            }}
+            className={clsx(
+              'rounded-full',
+              isCurrent ? 'bg-primary-300' : 'bg-blue-200',
+              isCurrent && pulse && 'animate-pulse',
+            )}
+          />
+        );
+      })}
     </div>
   );
 }
