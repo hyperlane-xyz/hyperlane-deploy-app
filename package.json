@@ -1,6 +1,6 @@
 {
   "name": "@hyperlane-xyz/hyperlane-deploy",
-  "description": "Deploy Hyperlane contracts such as Warp Routes with just a few easy steps.",
+  "description": "Deploy Hyperlane applications and contracts, such as Warp Routes, with just a few easy steps.",
   "version": "8.2.0",
   "author": "J M Rossy",
   "dependencies": {

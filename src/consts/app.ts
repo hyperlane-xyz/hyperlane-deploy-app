@@ -9,8 +9,8 @@ export const MAIN_FONT = SpaceGrotesk({
 });
 export const APP_NAME = 'Hyperlane Deploy';
 export const APP_DESCRIPTION =
-  'A DApp to deploy Hyperlane contracts and applications, such as Warp Routes.';
-export const APP_URL = 'TODO';
+  'Deploy Hyperlane applications and contracts, such as Warp Routes, with just a few easy steps.';
+export const APP_URL = 'https://deploy.hyperlane.xyz';
 export const BRAND_COLOR = Color.primary['500'];
 export const BACKGROUND_COLOR = Color.primary['500'];
 export const BACKGROUND_IMAGE = 'url(/backgrounds/main.svg)';
