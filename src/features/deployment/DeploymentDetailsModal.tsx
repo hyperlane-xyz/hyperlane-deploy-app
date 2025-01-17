@@ -37,7 +37,7 @@ export function DeploymentsDetailsModal({
         <DeploymentProperty name="Chains" value={chainNames} />
       </div>
       <CollapsibleData data={config.config} label="Deployment Config" />
-      {result && <CollapsibleData data={result} label="Deployment Result" />}
+      {result && <CollapsibleData data={result.result} label="Deployment Result" />}
     </Modal>
   );
 }

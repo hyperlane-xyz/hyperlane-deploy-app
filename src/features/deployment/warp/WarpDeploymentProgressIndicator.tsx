@@ -33,7 +33,7 @@ export function WarpDeploymentProgressIndicator({
     <div className={clsx('flex flex-col items-center space-y-4', className)}>
       <p>{expectedLogs[stepIndex][1]}</p>
       <Stepper
-        numSteps={expectedLogs.length + 20}
+        numSteps={expectedLogs.length}
         currentStep={stepIndex + 1}
         size={9}
         pulse
