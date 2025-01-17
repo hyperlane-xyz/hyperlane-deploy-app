@@ -27,8 +27,7 @@ export async function getTransferTx(
   if (token.protocol === ProtocolType.Ethereum) {
     // Add chainId to help reduce likely of wallet signing on wrong chain
     const chainId = getChainIdNumber(chainMetadata);
-    // TODO remove data when widgets lib is updated
-    txParams = { ...txParams, chainId, data: '0x' };
+    txParams = { ...txParams, chainId };
   }
 
   return {
