@@ -32,7 +32,7 @@ export const TokenTypeDescriptions: Record<TokenType, { label: string; descripti
   },
   [TokenType.fastSynthetic]: {
     label: 'Fast Synthetic',
-    description: 'A synthetic HypErc20 token to pair with a Fast Collateral token.',
+    description: 'A synthetic HypERC20 token to pair with a Fast Collateral token.',
   },
   [TokenType.native]: {
     label: 'Native',
@@ -44,11 +44,11 @@ export const TokenTypeDescriptions: Record<TokenType, { label: string; descripti
   },
   [TokenType.synthetic]: {
     label: 'Synthetic',
-    description: 'A synthetic HypErc20 token to pair with any collateralized type.',
+    description: 'A synthetic HypERC20 token to pair with any collateralized type.',
   },
   [TokenType.syntheticRebase]: {
     label: 'Synthetic Rebased',
-    description: 'A synthetic HypErc20 token to pair with a Collateral Rebased Vault.',
+    description: 'A synthetic HypERC20 token to pair with a Collateral Rebased Vault.',
   },
   [TokenType.syntheticUri]: {
     label: 'Synthetic NFT',

@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { SolidButton } from '../components/buttons/SolidButton';
+import { AUnderline } from '../components/text/A';
 import { links } from '../consts/links';
 import BlueWave from '../images/illustrations/blue-wave.svg';
 import SpaceCraft from '../images/illustrations/spacecraft.webp';
@@ -10,7 +11,7 @@ export function LandingPage() {
   const { setPage } = useCardNav();
 
   return (
-    <div className="max-w-full space-y-6 p-4 text-center">
+    <div className="max-w-full space-y-5 p-4 text-center">
       <div className="relative -mx-8 flex items-center justify-center">
         <Image src={BlueWave} alt="" className="absolute left-0 right-0 top-[0.4rem] rotate-6" />
         <Image width={110} height={110} src={SpaceCraft} alt="" className="z-[5] -rotate-[16deg]" />
@@ -23,6 +24,10 @@ export function LandingPage() {
       <p className="max-w-md px-2 text-sm leading-relaxed">
         Follow three steps to create a new route: configure your options, deploy your contracts, and
         set up a bridge UI.
+      </p>
+      <p className="max-w-md px-2 text-sm leading-relaxed">
+        To use more advanced settings, use the{' '}
+        <AUnderline href={links.cliDocs}>Hyperlane CLI.</AUnderline>
       </p>
       <div className="flex justify-center gap-12 pt-1">
         <a

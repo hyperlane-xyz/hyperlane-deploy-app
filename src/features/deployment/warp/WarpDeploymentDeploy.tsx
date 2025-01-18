@@ -2,7 +2,7 @@ import { MultiProtocolProvider, WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { errorToString, sleep } from '@hyperlane-xyz/utils';
 import { Button, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { PlanetSpinner } from '../../../components/animation/PlanetSpinner';
 import { SlideIn } from '../../../components/animation/SlideIn';
 import { SolidButton } from '../../../components/buttons/SolidButton';
@@ -48,19 +48,25 @@ export function WarpDeploymentDeploy() {
 
   const { refundAsync } = useRefundDeployerAccounts();
 
-  const onFailure = (error: Error) => {
-    const errMsg = errorToString(error, 5000);
-    failDeployment(currentIndex, errMsg);
-    refundAsync().finally(() => setPage(CardPage.WarpFailure));
-  };
+  const onFailure = useCallback(
+    (error: Error) => {
+      const errMsg = errorToString(error, 5000);
+      failDeployment(currentIndex, errMsg);
+      refundAsync().finally(() => setPage(CardPage.WarpFailure));
+    },
+    [currentIndex, failDeployment, refundAsync, setPage],
+  );
 
-  const onDeploymentSuccess = (config: WarpCoreConfig) => {
-    completeDeployment(currentIndex, {
-      type: DeploymentType.Warp,
-      result: config,
-    });
-    refundAsync().finally(() => setPage(CardPage.WarpSuccess));
-  };
+  const onDeploymentSuccess = useCallback(
+    (config: WarpCoreConfig) => {
+      completeDeployment(currentIndex, {
+        type: DeploymentType.Warp,
+        result: config,
+      });
+      refundAsync().finally(() => setPage(CardPage.WarpSuccess));
+    },
+    [currentIndex, completeDeployment, refundAsync, setPage],
+  );
 
   const {
     deploy,
@@ -69,12 +75,12 @@ export function WarpDeploymentDeploy() {
     cancel: cancelDeployment,
   } = useWarpDeployment(deploymentConfig, onDeploymentSuccess, onFailure);
 
-  const onDeployerFunded = () => {
+  const onDeployerFunded = useCallback(() => {
     setStep(DeployStep.ExecuteDeploy);
     if (isDeploymentIdle) deploy();
-  };
+  }, [isDeploymentIdle, deploy, setStep]);
 
-  const onCancel = async () => {
+  const onCancel = useCallback(async () => {
     if (isDeploymentPending) cancelDeployment();
     updateDeploymentStatus(currentIndex, DeploymentStatus.Cancelled);
     setStep(DeployStep.CancelDeploy);
@@ -86,7 +92,14 @@ export function WarpDeploymentDeploy() {
     await sleep(CANCEL_SLEEP_DELAY);
 
     refundAsync().finally(() => setPage(CardPage.WarpForm));
-  };
+  }, [
+    isDeploymentPending,
+    currentIndex,
+    cancelDeployment,
+    refundAsync,
+    setPage,
+    updateDeploymentStatus,
+  ]);
 
   if (!deploymentConfig) throw new Error('Deployment config is required');
 

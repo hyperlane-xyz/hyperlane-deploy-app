@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { BackButton } from '../../../components/buttons/BackButton';
 import { SolidButton } from '../../../components/buttons/SolidButton';
-import { A } from '../../../components/text/A';
+import { AUnderline, LinkStyles } from '../../../components/text/A';
 import { H1 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
 import { CardPage } from '../../../flows/CardPage';
@@ -165,17 +165,11 @@ function InfoSection() {
       <Image src={InfoCircle} width={16} alt="" />
       <p className="text-xs">
         To use more advanced settings, such as a custom{' '}
-        <A className={styles.infoBtn} href={links.ismDocs}>
-          Interchain Security Module
-        </A>{' '}
-        (ISM), you can{' '}
-        <button onClick={onClickCopy} className={styles.infoBtn}>
+        <AUnderline href={links.ismDocs}>Interchain Security Module</AUnderline> (ISM), you can{' '}
+        <button onClick={onClickCopy} className={LinkStyles.underline}>
           copy this config
         </button>{' '}
-        and use the{' '}
-        <A className={styles.infoBtn} href={links.cliDocs}>
-          Hyperlane CLI.
-        </A>
+        and use the <AUnderline href={links.cliDocs}>Hyperlane CLI.</AUnderline>
       </p>
     </div>
   );
@@ -226,7 +220,3 @@ function ButtonSection() {
     </div>
   );
 }
-
-const styles = {
-  infoBtn: 'underline underline-offset-2 cursor-pointer hover:text-primary-500',
-};
