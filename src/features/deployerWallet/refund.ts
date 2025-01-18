@@ -19,7 +19,7 @@ import { getTransferTx, sendTxFromWallet } from './transactions';
 import { DeployerWallets } from './types';
 import { useDeployerWallets } from './wallets';
 
-export function useRefundDeployerAccounts() {
+export function useRefundDeployerAccounts(onSettled?: () => void) {
   const multiProvider = useMultiProvider();
   const { chains } = usePastDeploymentChains();
   const { wallets } = useDeployerWallets();
@@ -29,6 +29,7 @@ export function useRefundDeployerAccounts() {
     mutationKey: ['refundDeployerAccounts', chains, accounts],
     mutationFn: () => refundDeployerAccounts(chains, wallets, multiProvider, accounts),
     retry: false,
+    onSettled,
   });
 
   useToastError(
