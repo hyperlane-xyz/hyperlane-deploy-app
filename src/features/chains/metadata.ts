@@ -7,6 +7,7 @@ import {
   ChainMap,
   ChainMetadata,
   ChainMetadataSchema,
+  ChainTechnicalStack,
   mergeChainMetadataMap,
 } from '@hyperlane-xyz/sdk';
 import { objFilter, objMap, promiseObjAll, ProtocolType } from '@hyperlane-xyz/utils';
@@ -54,7 +55,8 @@ export async function assembleChainMetadata(
   // TODO remove if/when this app isn't EVM-only
   const evmRegistryChainMetadata = objFilter(
     registryChainMetadata,
-    (_, m): m is ChainMetadata => m.protocol === ProtocolType.Ethereum,
+    (_, m): m is ChainMetadata =>
+      m.protocol === ProtocolType.Ethereum && m.technicalStack !== ChainTechnicalStack.ZkSync,
   );
 
   let chainMetadata = mergeChainMetadataMap(evmRegistryChainMetadata, filesystemMetadata);
