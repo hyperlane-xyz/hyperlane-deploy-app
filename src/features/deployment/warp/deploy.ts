@@ -30,8 +30,11 @@ import {
   isCollateralTokenConfig,
   isTokenMetadata,
 } from '@hyperlane-xyz/sdk';
-import { Address, ProtocolType, assert, objMap, promiseObjAll } from '@hyperlane-xyz/utils';
+import { Address, ProtocolType, assert, objMap, promiseObjAll, sleep } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo, useState } from 'react';
+import { hasPendingTx } from '../../deployerWallet/transactions';
+
+const NUM_SECONDS_FOR_TX_WAIT = 10;
 
 export function useWarpDeployment(
   deploymentConfig?: WarpDeploymentConfig,
@@ -54,7 +57,8 @@ export function useWarpDeployment(
       return executeDeploy(multiProvider, wallets, deploymentConfig);
     },
     retry: false,
-    onError: (e: Error) => {
+    onError: async (e: Error) => {
+      await haltDeployment(multiProvider, wallets, deploymentConfig?.chains);
       if (!isCancelled) onFailure?.(e);
     },
     onSuccess: (r: WarpCoreConfig) => {
@@ -64,14 +68,11 @@ export function useWarpDeployment(
 
   useToastError(!isCancelled && error, 'Error deploying warp route.');
 
-  const cancel = useCallback(() => {
+  const cancel = useCallback(async () => {
     if (!isPending) return;
     setIsCancelled(true);
     logger.debug('Cancelling deployment');
-    // Clear signers from multiProvider to force a failure of the
-    // next tx from the deployers
-    multiProvider.setSharedSigner(null);
-
+    await haltDeployment(multiProvider, wallets, deploymentConfig?.chains);
     // multiProvider is intentionally excluded from the deps array
     // to ensure that this cancel callback remains bound to the
     // one used in the active deployment
@@ -353,4 +354,47 @@ function fullyConnectTokens(warpCoreConfig: WarpCoreConfig): void {
       });
     }
   }
+}
+
+/**
+ * This attempts to halt active deployments by disabling the signers
+ * in the multiProvider. This works to prevent new txs initiated from
+ * the multiProvider but cannot stop txs that are 1) already in flight or
+ * 2) will be sent from a signer other than the one in the multiProvider (e.g
+ * an ethers Factory created a copy of the signer and uses that to send txs).
+ * After several hours of experiments, I suspect this is the best we can do
+ * without restructuring the SDK's deployers.
+ *
+ * In the event where this misses a tx or two, there's a chance the refund tx
+ * will fail. Assuming the retries fail as well, a user would need to manually
+ * initiate a refund later via the DeployerRecoveryModal.
+ */
+async function haltDeployment(
+  multiProvider: MultiProvider,
+  wallets: DeployerWallets,
+  chains: ChainName[] = [],
+) {
+  logger.debug('Clearing signers from multiProvider');
+  multiProvider.setSharedSigner(null);
+  logger.debug('Waiting for pending txs to settle');
+  await sleep(5000);
+  // Wait up to NUM_SECONDS_FOR_TX_WAIT for tx to settle
+  for (let i = 0; i < NUM_SECONDS_FOR_TX_WAIT; i++) {
+    const results = await Promise.all(
+      chains.map(async (chainName) => {
+        try {
+          const protocol = multiProvider.getProtocol(chainName);
+          const deployer = wallets[protocol];
+          if (!deployer) return false;
+          return hasPendingTx(deployer, chainName, multiProvider);
+        } catch (error) {
+          logger.error(`Error checking pending txs on ${chainName}`, error);
+          return true;
+        }
+      }),
+    );
+    if (results.some((r) => r)) sleep(1000);
+    else return;
+  }
+  logger.warn('Timed out waiting for pending txs to settle');
 }

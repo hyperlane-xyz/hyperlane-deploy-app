@@ -36,7 +36,7 @@ export function useSdkLogWatcher() {
 
     return () => {
       // Replace global rootLogger with new one
-      configureRootLogger(LogFormat.JSON, LogLevelWithOff.Debug);
+      configureRootLogger(LogFormat.JSON, LogLevelWithOff.Info);
     };
   }, []);
 }

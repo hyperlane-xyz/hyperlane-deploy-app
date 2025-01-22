@@ -4,7 +4,7 @@ import {
   TypedTransaction,
   TypedTransactionReceipt,
 } from '@hyperlane-xyz/sdk';
-import { assert, ProtocolType } from '@hyperlane-xyz/utils';
+import { assert, ProtocolType, retryAsync } from '@hyperlane-xyz/utils';
 import { AccountInfo, getAccountAddressForChain, useAccounts } from '@hyperlane-xyz/widgets';
 import { useMutation } from '@tanstack/react-query';
 import BigNumber from 'bignumber.js';
@@ -91,7 +91,11 @@ async function transferBalances(
 
           const tx = await getTransferTx(recipient, adjustedAmount, token, multiProvider);
 
-          const txReceipt = await sendTxFromWallet(deployer, tx, chainName, multiProvider);
+          const txReceipt = await retryAsync(
+            () => sendTxFromWallet(deployer, tx, chainName, multiProvider),
+            3,
+            2000,
+          );
           logger.debug('Transfer tx confirmed on chain', chainName, txReceipt.receipt);
           return txReceipt;
         } catch (error) {

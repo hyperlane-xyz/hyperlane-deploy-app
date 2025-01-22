@@ -1,5 +1,5 @@
 import { MultiProtocolProvider, WarpCoreConfig } from '@hyperlane-xyz/sdk';
-import { errorToString, sleep } from '@hyperlane-xyz/utils';
+import { errorToString } from '@hyperlane-xyz/utils';
 import { Button, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import { useCallback, useMemo, useState } from 'react';
@@ -26,8 +26,6 @@ import { DeploymentStatus, DeploymentType, WarpDeploymentConfig } from '../types
 import { useWarpDeployment } from './deploy';
 import { WarpDeploymentProgressIndicator } from './WarpDeploymentProgressIndicator';
 
-const CANCEL_SLEEP_DELAY = 10_000;
-
 enum DeployStep {
   FundDeployer,
   ExecuteDeploy,
@@ -49,7 +47,7 @@ export function WarpDeploymentDeploy() {
   const { refundAsync } = useRefundDeployerAccounts();
 
   const onFailure = useCallback(
-    (error: Error) => {
+    async (error: Error) => {
       const errMsg = errorToString(error, 5000);
       failDeployment(currentIndex, errMsg);
       refundAsync().finally(() => setPage(CardPage.WarpFailure));
@@ -71,7 +69,6 @@ export function WarpDeploymentDeploy() {
   const {
     deploy,
     isIdle: isDeploymentIdle,
-    isPending: isDeploymentPending,
     cancel: cancelDeployment,
   } = useWarpDeployment(deploymentConfig, onDeploymentSuccess, onFailure);
 
@@ -81,25 +78,11 @@ export function WarpDeploymentDeploy() {
   }, [isDeploymentIdle, deploy, setStep]);
 
   const onCancel = useCallback(async () => {
-    if (isDeploymentPending) cancelDeployment();
     updateDeploymentStatus(currentIndex, DeploymentStatus.Cancelled);
     setStep(DeployStep.CancelDeploy);
-
-    // A delay is required to ensure that pending txs have a chance to settle
-    // before the refunder attempts to send new ones
-    // This is imperfect but users can always run it again from DeployerRecoveryModal
-    // TODO consider replacing with logic to check for pending txs from any deployer wallets
-    await sleep(CANCEL_SLEEP_DELAY);
-
+    await cancelDeployment();
     refundAsync().finally(() => setPage(CardPage.WarpForm));
-  }, [
-    isDeploymentPending,
-    currentIndex,
-    cancelDeployment,
-    refundAsync,
-    setPage,
-    updateDeploymentStatus,
-  ]);
+  }, [currentIndex, cancelDeployment, refundAsync, setPage, updateDeploymentStatus]);
 
   if (!deploymentConfig) throw new Error('Deployment config is required');
 
@@ -189,7 +172,17 @@ function FundDeployerAccounts({
         className="px-4 py-1.5 text-md"
         onClick={onClickFund}
         disabled={isTxPending || isDeployerLoading}
-      >{`Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`}</SolidButton>
+      >
+        {isTxPending ? (
+          <>
+            <span>Funding on {currentChainDisplay}</span>
+            <SpinnerIcon width={18} height={18} color={Color.gray['600']} className="ml-3" />
+          </>
+        ) : (
+          `Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`
+        )}
+        {}
+      </SolidButton>
     </div>
   );
 }

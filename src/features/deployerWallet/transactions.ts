@@ -1,14 +1,17 @@
 import {
   getChainIdNumber,
   MultiProtocolProvider,
+  MultiProvider,
   ProviderType,
   Token,
+  TOKEN_STANDARD_TO_PROVIDER_TYPE,
   TypedTransaction,
   TypedTransactionReceipt,
   WarpTxCategory,
   WarpTypedTransaction,
 } from '@hyperlane-xyz/sdk';
 import { ProtocolType } from '@hyperlane-xyz/utils';
+import { logger } from '../../utils/logger';
 import { TypedWallet } from './types';
 
 // TODO edit Widgets lib to default to TypedTransaction instead of WarpTypedTransaction?
@@ -31,9 +34,7 @@ export async function getTransferTx(
   }
 
   return {
-    // TODO use TOKEN_STANDARD_TO_PROVIDER_TYPE here when it's exported from the SDK
-    // type: TOKEN_STANDARD_TO_PROVIDER_TYPE[token.standard],
-    type: ProviderType.EthersV5,
+    type: TOKEN_STANDARD_TO_PROVIDER_TYPE[token.standard],
     transaction: txParams,
     category: WarpTxCategory.Transfer,
   } as WarpTypedTransaction;
@@ -58,5 +59,37 @@ export async function sendTxFromWallet(
     };
   } else {
     throw new Error(`Unsupported provider type for sending txs: ${typedWallet.type}`);
+  }
+}
+
+// TODO multi-protocol support
+export async function hasPendingTx(
+  typedWallet: TypedWallet,
+  chainName: ChainName,
+  multiProvider: MultiProvider,
+) {
+  const { type, address } = typedWallet;
+  let hasPending = false;
+  if (type === ProviderType.EthersV5) {
+    const provider = multiProvider.getProvider(chainName);
+    // Based on https://github.com/ethers-io/ethers.js/discussions/3470
+    // This is an imperfect way to check for pending txs but it's probably
+    // the best approximation we can do. The eth_pendingTransactions may also
+    // help but it's not supported by all providers.
+    const [currentNonce, pendingNonce] = await Promise.all([
+      provider.getTransactionCount(address),
+      provider.getTransactionCount(address, 'pending'),
+    ]);
+    hasPending = currentNonce !== pendingNonce;
+  } else {
+    throw new Error(`Unsupported provider type for sending txs: ${typedWallet.type}`);
+  }
+
+  if (hasPending) {
+    logger.debug(`Pending tx found for for ${address} on ${chainName}`);
+    return true;
+  } else {
+    logger.debug(`No pending tx found for for ${address} on ${chainName}`);
+    return false;
   }
 }
