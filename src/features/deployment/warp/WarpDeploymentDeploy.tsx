@@ -47,7 +47,7 @@ export function WarpDeploymentDeploy() {
   const { refundAsync } = useRefundDeployerAccounts();
 
   const onFailure = useCallback(
-    async (error: Error) => {
+    (error: Error) => {
       const errMsg = errorToString(error, 5000);
       failDeployment(currentIndex, errMsg);
       refundAsync().finally(() => setPage(CardPage.WarpFailure));
