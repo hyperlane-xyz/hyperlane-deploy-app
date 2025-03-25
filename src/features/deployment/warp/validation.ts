@@ -5,8 +5,8 @@ import {
   MultiProtocolProvider,
   Token,
   TokenMetadata,
-  WarpRouteDeployConfig,
-  WarpRouteDeployConfigSchema,
+  WarpRouteDeployConfigMailboxRequired,
+  WarpRouteDeployConfigMailboxRequiredSchema,
 } from '@hyperlane-xyz/sdk';
 import {
   errorToString,
@@ -124,7 +124,7 @@ function assembleWarpConfig(
   routerConfigs: HypTokenRouterConfig[],
   accounts: Record<ProtocolType, AccountInfo>,
   multiProvider: MultiProtocolProvider,
-): Result<WarpRouteDeployConfig> {
+): Result<WarpRouteDeployConfigMailboxRequired> {
   let warpRouteDeployConfig: ChainMap<HypTokenRouterConfig> = chainNames.reduce(
     (acc, chainName, index) => {
       const owner = getAccountAddressForChain(multiProvider, chainName, accounts);
@@ -153,7 +153,7 @@ function assembleWarpConfig(
   });
 
   const warpRouteConfigValidationResult =
-    WarpRouteDeployConfigSchema.safeParse(warpRouteDeployConfig);
+    WarpRouteDeployConfigMailboxRequiredSchema.safeParse(warpRouteDeployConfig);
 
   if (!warpRouteConfigValidationResult.success) {
     return failure(zodErrorToString(warpRouteConfigValidationResult.error));
