@@ -1,4 +1,5 @@
 import { ChainMap } from '@hyperlane-xyz/sdk';
+import { ProtocolType } from '@hyperlane-xyz/utils';
 import { ADDRESS_BLACKLIST } from './blacklist';
 
 const addressBlacklist = ADDRESS_BLACKLIST.map((address) => address.toLowerCase());
@@ -25,6 +26,7 @@ interface Config {
   deployerWalletEncryptionSalt: string; // Encryption salt for temporary deployer wallets
   version: string; // Matches version number in package.json
   walletConnectProjectId: string; // Project ID provided by walletconnect
+  walletProtocols: ProtocolType[] | undefined; // Wallet Protocols to show in the wallet connect modal. Leave undefined to include all of them
 }
 
 export const config: Config = Object.freeze({
@@ -39,4 +41,5 @@ export const config: Config = Object.freeze({
   deployerWalletEncryptionSalt,
   version,
   walletConnectProjectId,
+  walletProtocols: [ProtocolType.Ethereum], // only EVM wallets allowed for now
 });
