@@ -51,7 +51,7 @@ export function getTokenMetadata(
   } else if (isNativeTokenType(tokenType)) {
     const { nativeToken } = multiProvider.getChainMetadata(chainName);
     assert(nativeToken, 'Native token metadata missing for chain');
-    return Promise.resolve({ ...nativeToken, totalSupply: 0 });
+    return Promise.resolve({ ...nativeToken });
   } else {
     return undefined;
   }
