@@ -1,5 +1,5 @@
 import { WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
-import { fromWeiRounded, isAddress, objLength } from '@hyperlane-xyz/utils';
+import { isAddress, objLength } from '@hyperlane-xyz/utils';
 import { IconButton, PencilIcon, SpinnerIcon } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
@@ -67,14 +67,13 @@ function ConfigItem({ chain, index }: { chain: ChainName; index: number }) {
 
   const numConfigs = objLength(deploymentConfig.config);
   const chainConfig = deploymentConfig.config[chain];
-  const { name, symbol, decimals, totalSupply, type, owner } = chainConfig;
+  const { name, symbol, decimals, type, owner } = chainConfig;
   // Cast here to workaround cumbersome discriminated union with many different cases
   const tokenAddress = (chainConfig as any).token;
   const isSynthetic = isSyntheticTokenType(type);
 
   const chainDisplay = getChainDisplayName(multiProvider, chain, true);
   const typeDisplay = TokenTypeDescriptions[type].label;
-  const supplyDisplay = totalSupply ? fromWeiRounded(totalSupply, decimals, 0) : 'Infinite';
 
   const onChangeValue = (key: string, value: string) => {
     const newChainConfig = { ...chainConfig, [key]: value };
@@ -86,7 +85,7 @@ function ConfigItem({ chain, index }: { chain: ChainName; index: number }) {
     <div className="space-y-2 rounded-lg bg-blue-500/5 px-3 py-2">
       <h3 className="text-xs font-medium text-gray-700">{`Chain ${index + 1} / ${numConfigs}`}</h3>
       <div className="grid grid-cols-2 gap-x-16">
-        <div className="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-2">
+        <div className="grid grid-cols-[min-content,1fr] grid-rows-3 gap-x-2 gap-y-2">
           <ConfigLabelAndValue label="Chain" value={chainDisplay} />
           <ConfigLabelAndValue
             label="Token"
@@ -96,7 +95,7 @@ function ConfigItem({ chain, index }: { chain: ChainName; index: number }) {
           />
           <ConfigLabelAndValue label="Decimals" value={decimals} />
         </div>
-        <div className="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-2">
+        <div className="grid grid-cols-[min-content,1fr] grid-rows-3 gap-x-2 gap-y-2">
           <ConfigLabelAndValue label="Type" value={typeDisplay} />
           <ConfigLabelAndValue
             label="Symbol"
@@ -104,7 +103,6 @@ function ConfigItem({ chain, index }: { chain: ChainName; index: number }) {
             isEditable={isSynthetic}
             onChange={(v: string) => onChangeValue('symbol', v)}
           />
-          <ConfigLabelAndValue label="Supply" value={supplyDisplay} />
         </div>
       </div>
       <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2">

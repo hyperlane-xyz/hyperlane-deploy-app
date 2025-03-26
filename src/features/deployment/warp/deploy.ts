@@ -25,7 +25,7 @@ import {
   TOKEN_TYPE_TO_STANDARD,
   TokenFactories,
   WarpCoreConfig,
-  WarpRouteDeployConfig,
+  WarpRouteDeployConfigMailboxRequired,
   getTokenConnectionId,
   isCollateralTokenConfig,
   isTokenMetadata,
@@ -126,11 +126,11 @@ export async function executeDeploy(
 }
 
 async function resolveWarpIsmAndHook(
-  deployConfig: WarpRouteDeployConfig,
+  deployConfig: WarpRouteDeployConfigMailboxRequired,
   multiProvider: MultiProvider,
   ismFactoryDeployer: HyperlaneProxyFactoryDeployer,
   contractVerifier?: ContractVerifier,
-): Promise<WarpRouteDeployConfig> {
+): Promise<WarpRouteDeployConfigMailboxRequired> {
   return promiseObjAll(
     objMap(deployConfig, async (chain, config) => {
       const chainAddresses: Record<string, string> = registryChainAddresses[chain];
@@ -288,7 +288,7 @@ async function createWarpHook({
 
 async function getWarpCoreConfig(
   multiProvider: MultiProvider,
-  warpDeployConfig: WarpRouteDeployConfig,
+  warpDeployConfig: WarpRouteDeployConfigMailboxRequired,
   contracts: HyperlaneContractsMap<TokenFactories>,
 ): Promise<WarpCoreConfig> {
   const warpCoreConfig: WarpCoreConfig = { tokens: [] };
@@ -310,7 +310,7 @@ async function getWarpCoreConfig(
  */
 function generateTokenConfigs(
   warpCoreConfig: WarpCoreConfig,
-  warpDeployConfig: WarpRouteDeployConfig,
+  warpDeployConfig: WarpRouteDeployConfigMailboxRequired,
   contracts: HyperlaneContractsMap<TokenFactories>,
   symbol: string,
   name: string,
