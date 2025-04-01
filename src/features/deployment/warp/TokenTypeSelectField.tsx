@@ -26,20 +26,12 @@ export const TokenTypeDescriptions: Record<TokenType, { label: string; descripti
     label: 'Collateral Rebased Vault',
     description: 'A lock-and-mint wrapper for ERC4626 vaults. Rebases yields to token holders.',
   },
-  [TokenType.fastCollateral]: {
-    label: 'Fast Collateral',
-    description: 'A collateralized wrapper but with support for LP-provided faster transfers.',
-  },
-  [TokenType.fastSynthetic]: {
-    label: 'Fast Synthetic',
-    description: 'A synthetic HypERC20 token to pair with a Fast Collateral token.',
-  },
   [TokenType.native]: {
     label: 'Native',
     description: 'A lock-and-mint wrapper for native currencies such as Ether (ETH).',
   },
   [TokenType.nativeScaled]: {
-    label: 'Fast Collateral',
+    label: 'Native Scaled',
     description: 'A native type but with support for token decimal scaling.',
   },
   [TokenType.synthetic]: {
