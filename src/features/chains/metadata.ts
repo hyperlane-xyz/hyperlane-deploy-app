@@ -9,8 +9,15 @@ import {
   ChainMetadataSchema,
   ChainTechnicalStack,
   mergeChainMetadataMap,
+  RpcUrlSchema,
 } from '@hyperlane-xyz/sdk';
-import { objFilter, objMap, promiseObjAll, ProtocolType } from '@hyperlane-xyz/utils';
+import {
+  objFilter,
+  objMap,
+  promiseObjAll,
+  ProtocolType,
+  tryParseJsonOrYaml,
+} from '@hyperlane-xyz/utils';
 import { z } from 'zod';
 import { chains as ChainsTS } from '../../consts/chains.ts';
 import ChainsYaml from '../../consts/chains.yaml';
@@ -70,6 +77,22 @@ export async function assembleChainMetadata(
 
   // Filter to only chains with native token information as this is used in a few places
   chainMetadata = objFilter(chainMetadata, (_, m): m is ChainMetadata => !!m.nativeToken);
+
+  // Override RPC urls with the one set in the environment variable
+  const parsedRpcOverridesResult = tryParseJsonOrYaml(config.rpcOverrides);
+  const rpcOverrides = z
+    .record(RpcUrlSchema)
+    .safeParse(parsedRpcOverridesResult.success && parsedRpcOverridesResult.data);
+  if (config.rpcOverrides && !rpcOverrides.success) {
+    logger.warn('Invalid RPC overrides config', rpcOverrides.error);
+  }
+  chainMetadata = objMap(chainMetadata, (chainName, metadata) => ({
+    ...metadata,
+    rpcUrls:
+      rpcOverrides.success && rpcOverrides.data[chainName]
+        ? [rpcOverrides.data[chainName], ...metadata.rpcUrls]
+        : metadata.rpcUrls,
+  }));
 
   const chainMetadataWithOverrides = mergeChainMetadataMap(chainMetadata, storeMetadataOverrides);
 
