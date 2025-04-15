@@ -109,10 +109,6 @@ function TokenTypeButton({ value, onClick }: { value: TokenType; onClick: () => 
 }
 
 function TokenTypeOption({ type, onClick }: { type: TokenType; onClick: (t: TokenType) => void }) {
-  console.log('TokenType', TokenTypeDescriptions);
-  console.log('type', type);
-  console.log('tt', TokenTypeDescriptions[type]);
-
   return (
     <Button
       onClick={() => onClick(type)}
