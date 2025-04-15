@@ -13,6 +13,7 @@ const deployerWalletEncryptionSalt =
   process?.env?.NEXT_PUBLIC_DEPLOYER_WALLET_ENCRYPTION_SALT || '';
 const version = process?.env?.NEXT_PUBLIC_VERSION || '0.0.0';
 const walletConnectProjectId = process?.env?.NEXT_PUBLIC_WALLET_CONNECT_ID || '';
+const rpcOverrides = process?.env?.NEXT_PUBLIC_RPC_OVERRIDES || '';
 
 interface Config {
   addressBlacklist: string[]; // A list of addresses that are blacklisted and cannot be used in the app
@@ -27,6 +28,7 @@ interface Config {
   version: string; // Matches version number in package.json
   walletConnectProjectId: string; // Project ID provided by walletconnect
   walletProtocols: ProtocolType[] | undefined; // Wallet Protocols to show in the wallet connect modal. Leave undefined to include all of them
+  rpcOverrides: string; // JSON string containing a map of chain names to an object with an URL for RPC overrides (For an example check the .env.example file)
 }
 
 export const config: Config = Object.freeze({
@@ -42,4 +44,5 @@ export const config: Config = Object.freeze({
   version,
   walletConnectProjectId,
   walletProtocols: [ProtocolType.Ethereum], // only EVM wallets allowed for now
+  rpcOverrides,
 });
