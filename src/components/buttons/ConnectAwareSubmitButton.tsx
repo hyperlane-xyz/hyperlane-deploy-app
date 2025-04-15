@@ -20,8 +20,9 @@ export function ConnectAwareSubmitButton({ chains, text, className }: Props) {
   const connectFns = useConnectFns();
 
   const unconnectedProtocols = useMemo(() => {
-    const protocols = new Set(chains.map((c) => multiProvider.tryGetProtocol(c)));
-    return [...protocols.values().filter((p): p is ProtocolType => !!p && !accounts[p]?.isReady)];
+    // Converting the set to an array because set.values does not work on Safari
+    const protocols = Array.from(new Set(chains.map((c) => multiProvider.tryGetProtocol(c))));
+    return [...protocols.filter((p): p is ProtocolType => !!p && !accounts[p]?.isReady)];
   }, [accounts, chains, multiProvider]);
   const isAccountsReady = unconnectedProtocols.length === 0;
 
