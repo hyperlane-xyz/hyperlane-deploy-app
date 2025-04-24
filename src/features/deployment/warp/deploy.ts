@@ -96,7 +96,13 @@ export async function executeDeploy(
   assert(typedConfig, 'Warp deployment config is required');
   logger.info('Executing warp route deployment');
 
-  const deploymentConfig = typedConfig.config;
+  const deploymentConfig: WarpRouteDeployConfigMailboxRequired = objMap(
+    typedConfig.config,
+    (chainName, deployConfig) => {
+      const chainAddresses: Record<string, string> = registryChainAddresses[chainName];
+      return { ...deployConfig, mailbox: chainAddresses.mailbox };
+    },
+  );
   const evmWallet = wallets[ProtocolType.Ethereum];
   assert(evmWallet?.type === ProviderType.EthersV5, 'EVM wallet is required for deployment');
   multiProvider.setSharedSigner(evmWallet.wallet);

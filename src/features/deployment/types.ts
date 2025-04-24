@@ -1,8 +1,4 @@
-import {
-  ChainName,
-  WarpCoreConfig,
-  WarpRouteDeployConfigMailboxRequired,
-} from '@hyperlane-xyz/sdk';
+import { ChainName, WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 
 export enum DeploymentStatus {
   Configured = 'configured',
@@ -42,7 +38,7 @@ interface ConfigBase {
 
 export interface WarpDeploymentConfig extends ConfigBase {
   type: DeploymentType.Warp;
-  config: WarpRouteDeployConfigMailboxRequired;
+  config: WarpRouteDeployConfig;
 }
 
 export interface CoreDeploymentConfig extends ConfigBase {

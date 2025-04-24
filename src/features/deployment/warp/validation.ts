@@ -1,12 +1,11 @@
-import { chainAddresses } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
   HypTokenRouterConfig,
   MultiProtocolProvider,
   Token,
   TokenMetadata,
-  WarpRouteDeployConfigMailboxRequired,
-  WarpRouteDeployConfigMailboxRequiredSchema,
+  WarpRouteDeployConfig,
+  WarpRouteDeployConfigSchema,
 } from '@hyperlane-xyz/sdk';
 import {
   errorToString,
@@ -54,6 +53,7 @@ export async function validateWarpDeploymentForm(
     const configItemsResults = await Promise.all(
       formConfigs.map((c) => validateChainTokenConfig(c, multiProvider)),
     );
+
     const errors = configItemsResults.reduce<Record<number, string>>((acc, r, i) => {
       if (!r.success) return { ...acc, [i]: r.error };
       return acc;
@@ -124,13 +124,12 @@ function assembleWarpConfig(
   routerConfigs: HypTokenRouterConfig[],
   accounts: Record<ProtocolType, AccountInfo>,
   multiProvider: MultiProtocolProvider,
-): Result<WarpRouteDeployConfigMailboxRequired> {
+): Result<WarpRouteDeployConfig> {
   let warpRouteDeployConfig: ChainMap<HypTokenRouterConfig> = chainNames.reduce(
     (acc, chainName, index) => {
       const owner = getAccountAddressForChain(multiProvider, chainName, accounts);
       acc[chainName] = {
         ...routerConfigs[index],
-        mailbox: chainAddresses[chainName].mailbox,
         owner,
       };
       return acc;
@@ -153,7 +152,7 @@ function assembleWarpConfig(
   });
 
   const warpRouteConfigValidationResult =
-    WarpRouteDeployConfigMailboxRequiredSchema.safeParse(warpRouteDeployConfig);
+    WarpRouteDeployConfigSchema.safeParse(warpRouteDeployConfig);
 
   if (!warpRouteConfigValidationResult.success) {
     return failure(zodErrorToString(warpRouteConfigValidationResult.error));
