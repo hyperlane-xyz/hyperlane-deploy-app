@@ -98,10 +98,10 @@ export async function executeDeploy(
 
   const deploymentConfig: WarpRouteDeployConfigMailboxRequired = objMap(
     typedConfig.config,
-    (chainName, deployConfig) => {
-      const chainAddresses: Record<string, string> = registryChainAddresses[chainName];
-      return { ...deployConfig, mailbox: chainAddresses.mailbox };
-    },
+    (chainName, deployConfig) => ({
+      ...deployConfig,
+      mailbox: registryChainAddresses[chainName].mailbox,
+    }),
   );
   const evmWallet = wallets[ProtocolType.Ethereum];
   assert(evmWallet?.type === ProviderType.EthersV5, 'EVM wallet is required for deployment');
