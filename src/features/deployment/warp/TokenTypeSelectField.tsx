@@ -2,10 +2,7 @@ import { TokenType } from '@hyperlane-xyz/sdk';
 import { Button, ChevronIcon, Modal, useModal } from '@hyperlane-xyz/widgets';
 import { FormButton } from '../../../components/buttons/FormButton';
 
-const HiddenTokenTypes = new Set([TokenType.fastCollateral, TokenType.fastSynthetic]);
-const TokenTypes = Object.values(TokenType)
-  .filter((token) => !HiddenTokenTypes.has(token))
-  .sort();
+const TokenTypes = Object.values(TokenType).sort();
 const PopularTokenTypes = [TokenType.collateral, TokenType.native, TokenType.synthetic];
 export const TokenTypeDescriptions = {
   [TokenType.collateral]: {
