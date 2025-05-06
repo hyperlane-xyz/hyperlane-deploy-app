@@ -26,6 +26,7 @@ import {
   TokenFactories,
   WarpCoreConfig,
   WarpRouteDeployConfigMailboxRequired,
+  extractIsmAndHookFactoryAddresses,
   getTokenConnectionId,
   isCollateralTokenConfig,
   isTokenMetadata,
@@ -196,29 +197,11 @@ async function createWarpIsm({
 
   logger.debug(`Creating ${interchainSecurityModule.type} ISM for token on ${chain} chain...`);
 
-  const {
-    mailbox,
-    domainRoutingIsmFactory,
-    staticAggregationHookFactory,
-    staticAggregationIsmFactory,
-    staticMerkleRootMultisigIsmFactory,
-    staticMessageIdMultisigIsmFactory,
-    staticMerkleRootWeightedMultisigIsmFactory,
-    staticMessageIdWeightedMultisigIsmFactory,
-  } = chainAddresses;
   const evmIsmModule = await EvmIsmModule.create({
     chain,
-    mailbox,
+    mailbox: chainAddresses.mailbox,
     multiProvider,
-    proxyFactoryFactories: {
-      domainRoutingIsmFactory,
-      staticAggregationHookFactory,
-      staticAggregationIsmFactory,
-      staticMerkleRootMultisigIsmFactory,
-      staticMessageIdMultisigIsmFactory,
-      staticMerkleRootWeightedMultisigIsmFactory,
-      staticMessageIdWeightedMultisigIsmFactory,
-    },
+    proxyFactoryFactories: extractIsmAndHookFactoryAddresses(chainAddresses),
     config: interchainSecurityModule,
     contractVerifier,
   });
@@ -251,26 +234,6 @@ async function createWarpHook({
 
   logger.debug(`Creating ${hook.type} Hook for token on ${chain} chain...`);
 
-  const {
-    mailbox,
-    domainRoutingIsmFactory,
-    staticAggregationHookFactory,
-    staticAggregationIsmFactory,
-    staticMerkleRootMultisigIsmFactory,
-    staticMessageIdMultisigIsmFactory,
-    staticMerkleRootWeightedMultisigIsmFactory,
-    staticMessageIdWeightedMultisigIsmFactory,
-  } = chainAddresses;
-  const proxyFactoryFactories = {
-    domainRoutingIsmFactory,
-    staticAggregationHookFactory,
-    staticAggregationIsmFactory,
-    staticMerkleRootMultisigIsmFactory,
-    staticMessageIdMultisigIsmFactory,
-    staticMerkleRootWeightedMultisigIsmFactory,
-    staticMessageIdWeightedMultisigIsmFactory,
-  };
-
   // If config.proxyadmin.address exists, then use that. otherwise deploy a new proxyAdmin
   const proxyAdminAddress: Address =
     warpConfig.proxyAdmin?.address ??
@@ -280,12 +243,12 @@ async function createWarpHook({
     chain,
     multiProvider,
     coreAddresses: {
-      mailbox,
+      mailbox: chainAddresses.mailbox,
       proxyAdmin: proxyAdminAddress,
     },
     config: hook,
     contractVerifier,
-    proxyFactoryFactories,
+    proxyFactoryFactories: extractIsmAndHookFactoryAddresses(chainAddresses),
   });
   logger.debug(`Finished creating ${hook.type} Hook for token on ${chain} chain.`);
   const { deployedHook } = evmHookModule.serialize();
