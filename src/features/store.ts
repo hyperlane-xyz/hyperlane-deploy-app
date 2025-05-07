@@ -21,6 +21,13 @@ import {
 // BEWARE: If this in incremented without a migration, the deployer keys will be lost
 const PERSIST_STATE_VERSION = 0;
 
+interface AppContext {
+  registry: IRegistry;
+  chainMetadata: ChainMap<ChainMetadata>;
+  multiProvider: MultiProtocolProvider;
+  apiKeys: ChainMap<string>;
+}
+
 // Keeping everything here for now as state is simple
 // Will refactor into slices as necessary
 export interface AppState {
@@ -30,11 +37,8 @@ export interface AppState {
   setChainMetadataOverrides: (overrides?: ChainMap<Partial<ChainMetadata> | undefined>) => void;
   multiProvider: MultiProtocolProvider;
   registry: IRegistry;
-  setContext: (context: {
-    registry: IRegistry;
-    chainMetadata: ChainMap<ChainMetadata>;
-    multiProvider: MultiProtocolProvider;
-  }) => void;
+  setContext: (context: AppContext) => void;
+  apiKeys: ChainMap<string>;
 
   // Encrypted temp deployer keys
   deployerKeys: DeployerKeys;
@@ -85,10 +89,11 @@ export const useStore = create<AppState>()(
         branch: config.registryBranch,
         proxyUrl: config.registryProxyUrl,
       }),
-      setContext: ({ registry, chainMetadata, multiProvider }) => {
+      setContext: ({ registry, chainMetadata, multiProvider, apiKeys }) => {
         logger.debug('Setting warp context in store');
-        set({ registry, chainMetadata, multiProvider });
+        set({ registry, chainMetadata, multiProvider, apiKeys });
       },
+      apiKeys: {},
 
       // Encrypted deployer keys
       deployerKeys: {},
@@ -189,8 +194,8 @@ export const useStore = create<AppState>()(
             return;
           }
           initWarpContext(state.registry, state.chainMetadataOverrides).then(
-            ({ registry, chainMetadata, multiProvider }) => {
-              state.setContext({ registry, chainMetadata, multiProvider });
+            ({ registry, chainMetadata, multiProvider, apiKeys }) => {
+              state.setContext({ registry, chainMetadata, multiProvider, apiKeys });
               logger.debug('Rehydration complete');
             },
           );
@@ -203,7 +208,7 @@ export const useStore = create<AppState>()(
 async function initWarpContext(
   registry: IRegistry,
   storeMetadataOverrides: ChainMap<Partial<ChainMetadata> | undefined>,
-) {
+): Promise<AppContext> {
   try {
     // Pre-load registry content to avoid repeated requests
     await registry.listRegistryContent();
@@ -212,7 +217,8 @@ async function initWarpContext(
       storeMetadataOverrides,
     );
     const multiProvider = new MultiProtocolProvider(chainMetadataWithOverrides);
-    return { registry, chainMetadata, multiProvider };
+    const apiKeys = getApiKeys(chainMetadata);
+    return { registry, chainMetadata, multiProvider, apiKeys };
   } catch (error) {
     toast.error('Error initializing warp context. Please check connection status and configs.');
     logger.error('Error initializing warp context', error);
@@ -220,6 +226,16 @@ async function initWarpContext(
       registry,
       chainMetadata: {},
       multiProvider: new MultiProtocolProvider({}),
+      apiKeys: {},
     };
   }
+}
+
+function getApiKeys(chainMetadata: ChainMap<ChainMetadata<object>>) {
+  return Object.entries(chainMetadata).reduce<ChainMap<string>>((acc, [chain, metadata]) => {
+    if (metadata.blockExplorers?.[0]?.apiKey) {
+      acc[chain] = metadata.blockExplorers[0].apiKey;
+    }
+    return acc;
+  }, {});
 }
