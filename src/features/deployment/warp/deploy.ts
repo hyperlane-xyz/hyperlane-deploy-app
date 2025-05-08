@@ -9,11 +9,14 @@ import { useDeployerWallets } from '../../deployerWallet/wallets';
 import { WarpDeploymentConfig } from '../types';
 // eslint-disable-next-line camelcase
 import { ProxyAdmin__factory } from '@hyperlane-xyz/core';
+import { buildArtifact as coreBuildArtifact } from '@hyperlane-xyz/core/buildArtifact.js';
 import { chainAddresses as registryChainAddresses } from '@hyperlane-xyz/registry';
 import {
+  ChainMap,
   ContractVerifier,
   EvmHookModule,
   EvmIsmModule,
+  ExplorerLicenseType,
   HookConfig,
   HypERC20Deployer,
   HypTokenRouterConfig,
@@ -34,6 +37,7 @@ import {
 import { Address, ProtocolType, assert, objMap, promiseObjAll, sleep } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo, useState } from 'react';
 import { hasPendingTx } from '../../deployerWallet/transactions';
+import { useStore } from '../../store';
 
 const NUM_SECONDS_FOR_TX_WAIT = 10;
 
@@ -49,13 +53,14 @@ export function useWarpDeployment(
     () => multiProtocolProvider.toMultiProvider(),
     [multiProtocolProvider],
   );
+  const apiKeys = useStore((s) => s.apiKeys);
   const { wallets } = useDeployerWallets();
 
   const { error, mutate, isIdle, isPending } = useMutation({
     mutationKey: ['warpDeploy', deploymentConfig, wallets],
     mutationFn: () => {
       setIsCancelled(false);
-      return executeDeploy(multiProvider, wallets, deploymentConfig);
+      return executeDeploy(multiProvider, wallets, apiKeys, deploymentConfig);
     },
     retry: false,
     onError: async (e: Error) => {
@@ -92,6 +97,7 @@ export function useWarpDeployment(
 export async function executeDeploy(
   multiProvider: MultiProvider,
   wallets: DeployerWallets,
+  apiKeys: ChainMap<string>,
   typedConfig?: WarpDeploymentConfig,
 ): Promise<WarpCoreConfig> {
   assert(typedConfig, 'Warp deployment config is required');
@@ -110,7 +116,14 @@ export async function executeDeploy(
 
   const deployer = new HypERC20Deployer(multiProvider);
 
-  const ismFactoryDeployer = new HyperlaneProxyFactoryDeployer(multiProvider);
+  const contractVerifier = new ContractVerifier(
+    multiProvider,
+    apiKeys,
+    coreBuildArtifact,
+    ExplorerLicenseType.MIT,
+  );
+
+  const ismFactoryDeployer = new HyperlaneProxyFactoryDeployer(multiProvider, contractVerifier);
 
   // For each chain in WarpRouteConfig, deploy each Ism Factory, if it's not in the registry
   // Then return a modified config with the ism and/or hook address as a string
@@ -118,6 +131,7 @@ export async function executeDeploy(
     deploymentConfig,
     multiProvider,
     ismFactoryDeployer,
+    contractVerifier,
   );
 
   const deployedContracts = await deployer.deploy(modifiedConfig);
