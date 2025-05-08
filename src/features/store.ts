@@ -218,6 +218,7 @@ async function initWarpContext(
     );
     const multiProvider = new MultiProtocolProvider(chainMetadataWithOverrides);
     const apiKeys = getApiKeys(chainMetadata);
+    console.log('getApikeys', apiKeys);
     return { registry, chainMetadata, multiProvider, apiKeys };
   } catch (error) {
     toast.error('Error initializing warp context. Please check connection status and configs.');
