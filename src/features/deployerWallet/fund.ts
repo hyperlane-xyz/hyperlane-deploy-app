@@ -1,9 +1,9 @@
 import { MultiProtocolProvider, Token } from '@hyperlane-xyz/sdk';
-import { assert } from '@hyperlane-xyz/utils';
 import {
   getAccountAddressForChain,
   useAccounts,
   useActiveChains,
+  useModal,
   useTransactionFns,
 } from '@hyperlane-xyz/widgets';
 import { useMutation } from '@tanstack/react-query';
@@ -26,9 +26,14 @@ export function useFundDeployerAccount(
   const activeAccounts = useAccounts(multiProvider);
   const activeChains = useActiveChains(multiProvider);
   const transactionFns = useTransactionFns(multiProvider);
+  const { close, isOpen, open } = useModal();
 
-  const { isPending, mutateAsync, error } = useMutation({
-    mutationKey: ['fundDeployerAccount', deployerAddress, chainName, gasUnits],
+  const {
+    isPending: excuteTransferPending,
+    mutateAsync: executeTransferMutation,
+    error: executeTransferError,
+  } = useMutation({
+    mutationKey: ['executeTransfer', deployerAddress, chainName, gasUnits],
     mutationFn: () => {
       if (!deployerAddress || !chainName || !gasUnits) return Promise.resolve(null);
       return executeTransfer({
@@ -43,15 +48,45 @@ export function useFundDeployerAccount(
     },
   });
 
+  const { isPending, mutateAsync, error } = useMutation({
+    mutationKey: [
+      'fundDeployerAccount',
+      deployerAddress,
+      chainName,
+      gasUnits,
+      executeTransferMutation,
+    ],
+    mutationFn: async () => {
+      if (!deployerAddress || !chainName || !gasUnits) return Promise.resolve(null);
+      const sufficientBalance = await isNativeBalanceSufficient({
+        chainName,
+        gasUnits,
+        activeAccounts,
+        multiProvider,
+      });
+      if (!sufficientBalance) {
+        open();
+        return Promise.resolve(null);
+      }
+      return executeTransferMutation();
+    },
+  });
+
   useToastError(
-    error,
+    error || executeTransferError,
     `Error funding deployer on ${getChainDisplayName(multiProvider, chainName)}`,
   );
 
   return {
     triggerTransaction: mutateAsync,
+    executeTransfer: executeTransferMutation,
+    excuteTransferPending,
+    executeTransferError,
     isPending,
     error,
+    openConfirmModal: open,
+    closeConfirmModal: close,
+    isConfirmOpen: isOpen,
   };
 }
 
@@ -83,7 +118,6 @@ async function executeTransfer({
   const amount = await getFundingAmount(chainName, gasUnits, multiProvider);
 
   const token = Token.FromChainMetadataNativeToken(chainMetadata);
-  await assertSenderBalance(sender, amount, token, multiProvider);
   const tx = await getTransferTx(deployerAddress, amount, token, multiProvider);
 
   try {
@@ -109,7 +143,7 @@ async function executeTransfer({
 }
 
 // TODO multi-protocol support
-async function getFundingAmount(
+export async function getFundingAmount(
   chainName: ChainName,
   gasUnits: bigint,
   multiProvider: MultiProtocolProvider,
@@ -119,12 +153,25 @@ async function getFundingAmount(
   return gasUnits * gasPrice;
 }
 
-async function assertSenderBalance(
-  sender: Address,
-  amount: bigint,
-  token: Token,
-  multiProvider: MultiProtocolProvider,
-) {
+async function isNativeBalanceSufficient({
+  chainName,
+  gasUnits,
+  multiProvider,
+  activeAccounts,
+}: {
+  chainName: ChainName;
+  gasUnits: bigint;
+  multiProvider: MultiProtocolProvider;
+  activeAccounts: ReturnType<typeof useAccounts>;
+}) {
+  const chainMetadata = multiProvider.getChainMetadata(chainName);
+  const sender = getAccountAddressForChain(multiProvider, chainName, activeAccounts.accounts);
+
+  if (!sender) throw new Error(`No active account found for chain ${chainName}`);
+
+  const amount = await getFundingAmount(chainName, gasUnits, multiProvider);
+  const token = Token.FromChainMetadataNativeToken(chainMetadata);
   const balance = await token.getBalance(multiProvider, sender);
-  assert(balance.amount >= amount, 'Insufficient balance for deployment');
+
+  return balance.amount >= amount;
 }
