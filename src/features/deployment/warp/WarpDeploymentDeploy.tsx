@@ -24,6 +24,7 @@ import { useSdkLogWatcher } from '../../logs/useSdkLogs';
 import { useDeploymentHistory, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentStatus, DeploymentType, WarpDeploymentConfig } from '../types';
 import { useWarpDeployment } from './deploy';
+import { WarpDeploymentConfirmModal } from './WarpDeploymentConfirmModal';
 import { WarpDeploymentProgressIndicator } from './WarpDeploymentProgressIndicator';
 
 enum DeployStep {
@@ -145,15 +146,16 @@ function FundDeployerAccounts({
   );
   const deployerAddress = wallets[currentChainProtocol]?.address;
 
-  const { isPending: isTxPending, triggerTransaction } = useFundDeployerAccount(
-    currentChain,
-    WARP_DEPLOY_GAS_UNITS,
-    deployerAddress,
-  );
+  const {
+    isPending: isTxPending,
+    triggerTransaction,
+    isConfirmOpen,
+    closeConfirmModal,
+    executeTransfer,
+    excuteTransferPending,
+  } = useFundDeployerAccount(currentChain, WARP_DEPLOY_GAS_UNITS, deployerAddress);
 
-  const onClickFund = async () => {
-    if (!deployerAddress) return;
-    await triggerTransaction();
+  const onFundSuccess = () => {
     if (currentChainIndex < numChains - 1) {
       setCurrentChainIndex(currentChainIndex + 1);
     } else {
@@ -161,29 +163,49 @@ function FundDeployerAccounts({
     }
   };
 
+  const onClickFund = async () => {
+    if (!deployerAddress) return;
+    const transactionResult = await triggerTransaction();
+    if (transactionResult) onFundSuccess();
+  };
+
+  const onConfirmModal = async () => {
+    if (!deployerAddress) return;
+    const transactionResult = await executeTransfer();
+    if (transactionResult) onFundSuccess();
+  };
+
   return (
-    <div className="flex flex-col items-center space-y-7">
-      <FundIcon color={Color.primary['500']} />
-      <p className="max-w-sm text-center text-md leading-relaxed">
-        To deploy, a temporary account must be funded for each chain. Unused amounts are refunded.
-      </p>
-      <SolidButton
-        color="accent"
-        className="px-4 py-1.5 text-md"
-        onClick={onClickFund}
-        disabled={isTxPending || isDeployerLoading}
-      >
-        {isTxPending ? (
-          <>
-            <span>Funding on {currentChainDisplay}</span>
-            <SpinnerIcon width={18} height={18} color={Color.gray['600']} className="ml-3" />
-          </>
-        ) : (
-          `Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`
-        )}
-        {}
-      </SolidButton>
-    </div>
+    <>
+      <div className="flex flex-col items-center space-y-7">
+        <FundIcon color={Color.primary['500']} />
+        <p className="max-w-sm text-center text-md leading-relaxed">
+          To deploy, a temporary account must be funded for each chain. Unused amounts are refunded.
+        </p>
+        <SolidButton
+          color="accent"
+          className="px-4 py-1.5 text-md"
+          onClick={onClickFund}
+          disabled={isTxPending || isDeployerLoading || excuteTransferPending}
+        >
+          {isTxPending ? (
+            <>
+              <span>Funding on {currentChainDisplay}</span>
+              <SpinnerIcon width={18} height={18} color={Color.gray['600']} className="ml-3" />
+            </>
+          ) : (
+            `Fund on ${currentChainDisplay} (Chain ${currentChainIndex + 1} / ${numChains})`
+          )}
+          {}
+        </SolidButton>
+      </div>
+      <WarpDeploymentConfirmModal
+        close={closeConfirmModal}
+        isOpen={isConfirmOpen}
+        onConfirm={onConfirmModal}
+        chainName={currentChain}
+      />
+    </>
   );
 }
 
