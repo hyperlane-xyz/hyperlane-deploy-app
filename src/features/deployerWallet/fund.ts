@@ -153,16 +153,6 @@ export async function getFundingAmount(
   return gasUnits * gasPrice;
 }
 
-async function assertSenderBalance(
-  sender: Address,
-  amount: bigint,
-  token: Token,
-  multiProvider: MultiProtocolProvider,
-) {
-  const balance = await token.getBalance(multiProvider, sender);
-  return balance.amount >= amount;
-}
-
 async function isNativeBalanceSufficient({
   chainName,
   gasUnits,
@@ -180,7 +170,8 @@ async function isNativeBalanceSufficient({
   if (!sender) throw new Error(`No active account found for chain ${chainName}`);
 
   const amount = await getFundingAmount(chainName, gasUnits, multiProvider);
-
   const token = Token.FromChainMetadataNativeToken(chainMetadata);
-  return await assertSenderBalance(sender, amount, token, multiProvider);
+  const balance = await token.getBalance(multiProvider, sender);
+
+  return balance.amount >= amount;
 }
