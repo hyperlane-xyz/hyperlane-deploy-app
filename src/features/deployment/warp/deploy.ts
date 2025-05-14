@@ -8,33 +8,23 @@ import { DeployerWallets } from '../../deployerWallet/types';
 import { useDeployerWallets } from '../../deployerWallet/wallets';
 import { WarpDeploymentConfig } from '../types';
 // eslint-disable-next-line camelcase
-import { ProxyAdmin__factory } from '@hyperlane-xyz/core';
-import { buildArtifact as coreBuildArtifact } from '@hyperlane-xyz/core/buildArtifact.js';
 import { chainAddresses as registryChainAddresses } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
-  ContractVerifier,
-  EvmHookModule,
-  EvmIsmModule,
-  ExplorerLicenseType,
-  HookConfig,
   HypERC20Deployer,
-  HypTokenRouterConfig,
   HyperlaneContractsMap,
-  HyperlaneProxyFactoryDeployer,
-  IsmConfig,
   MultiProvider,
   ProviderType,
   TOKEN_TYPE_TO_STANDARD,
   TokenFactories,
   WarpCoreConfig,
   WarpRouteDeployConfigMailboxRequired,
-  extractIsmAndHookFactoryAddresses,
+  executeWarpDeploy,
   getTokenConnectionId,
   isCollateralTokenConfig,
   isTokenMetadata,
 } from '@hyperlane-xyz/sdk';
-import { Address, ProtocolType, assert, objMap, promiseObjAll, sleep } from '@hyperlane-xyz/utils';
+import { ProtocolType, assert, objMap, sleep } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo, useState } from 'react';
 import { hasPendingTx } from '../../deployerWallet/transactions';
 import { useStore } from '../../store';
@@ -114,27 +104,12 @@ export async function executeDeploy(
   assert(evmWallet?.type === ProviderType.EthersV5, 'EVM wallet is required for deployment');
   multiProvider.setSharedSigner(evmWallet.wallet);
 
-  const deployer = new HypERC20Deployer(multiProvider);
-
-  const contractVerifier = new ContractVerifier(
+  const deployedContracts = await executeWarpDeploy(
     multiProvider,
-    apiKeys,
-    coreBuildArtifact,
-    ExplorerLicenseType.MIT,
-  );
-
-  const ismFactoryDeployer = new HyperlaneProxyFactoryDeployer(multiProvider, contractVerifier);
-
-  // For each chain in WarpRouteConfig, deploy each Ism Factory, if it's not in the registry
-  // Then return a modified config with the ism and/or hook address as a string
-  const modifiedConfig = await resolveWarpIsmAndHook(
     deploymentConfig,
-    multiProvider,
-    ismFactoryDeployer,
-    contractVerifier,
+    registryChainAddresses,
+    apiKeys,
   );
-
-  const deployedContracts = await deployer.deploy(modifiedConfig);
 
   const warpCoreConfig = await getWarpCoreConfig(
     multiProvider,
@@ -144,129 +119,6 @@ export async function executeDeploy(
 
   logger.info('Done warp route deployment');
   return warpCoreConfig;
-}
-
-async function resolveWarpIsmAndHook(
-  deployConfig: WarpRouteDeployConfigMailboxRequired,
-  multiProvider: MultiProvider,
-  ismFactoryDeployer: HyperlaneProxyFactoryDeployer,
-  contractVerifier?: ContractVerifier,
-): Promise<WarpRouteDeployConfigMailboxRequired> {
-  return promiseObjAll(
-    objMap(deployConfig, async (chain, config) => {
-      const chainAddresses: Record<string, string> = registryChainAddresses[chain];
-
-      assert(chainAddresses, `Factory addresses not found for ${chain}.`);
-
-      config.interchainSecurityModule = await createWarpIsm({
-        chain,
-        chainAddresses,
-        multiProvider,
-        contractVerifier,
-        ismFactoryDeployer,
-        warpConfig: config,
-      });
-
-      config.hook = await createWarpHook({
-        chain,
-        chainAddresses,
-        multiProvider,
-        contractVerifier,
-        ismFactoryDeployer,
-        warpConfig: config,
-      });
-      return config;
-    }),
-  );
-}
-
-/**
- * Deploys the Warp ISM for a given config
- *
- * @returns The deployed ism address
- */
-async function createWarpIsm({
-  chain,
-  chainAddresses,
-  multiProvider,
-  contractVerifier,
-  warpConfig,
-}: {
-  chain: string;
-  chainAddresses: Record<string, string>;
-  multiProvider: MultiProvider;
-  contractVerifier?: ContractVerifier;
-  warpConfig: HypTokenRouterConfig;
-  ismFactoryDeployer: HyperlaneProxyFactoryDeployer;
-}): Promise<IsmConfig | undefined> {
-  const { interchainSecurityModule } = warpConfig;
-  if (!interchainSecurityModule || typeof interchainSecurityModule === 'string') {
-    logger.debug(
-      `Config Ism is ${
-        !interchainSecurityModule ? 'empty' : interchainSecurityModule
-      }, skipping deployment.`,
-    );
-    return interchainSecurityModule;
-  }
-
-  logger.debug(`Creating ${interchainSecurityModule.type} ISM for token on ${chain} chain...`);
-
-  const evmIsmModule = await EvmIsmModule.create({
-    chain,
-    mailbox: chainAddresses.mailbox,
-    multiProvider,
-    proxyFactoryFactories: extractIsmAndHookFactoryAddresses(chainAddresses),
-    config: interchainSecurityModule,
-    contractVerifier,
-  });
-  const { deployedIsm } = evmIsmModule.serialize();
-  return deployedIsm;
-}
-
-async function createWarpHook({
-  chain,
-  chainAddresses,
-  multiProvider,
-  contractVerifier,
-  warpConfig,
-}: {
-  chain: string;
-  chainAddresses: Record<string, string>;
-  multiProvider: MultiProvider;
-  contractVerifier?: ContractVerifier;
-  warpConfig: HypTokenRouterConfig;
-  ismFactoryDeployer: HyperlaneProxyFactoryDeployer;
-}): Promise<HookConfig | undefined> {
-  const { hook } = warpConfig;
-
-  if (!hook || typeof hook === 'string') {
-    logger.debug(`Config Hook is ${!hook ? 'empty' : hook}, skipping deployment.`);
-    return hook;
-  }
-
-  logger.debug(`Loading registry factory addresses for ${chain}...`);
-
-  logger.debug(`Creating ${hook.type} Hook for token on ${chain} chain...`);
-
-  // If config.proxyadmin.address exists, then use that. otherwise deploy a new proxyAdmin
-  const proxyAdminAddress: Address =
-    warpConfig.proxyAdmin?.address ??
-    (await multiProvider.handleDeploy(chain, new ProxyAdmin__factory(), [])).address;
-
-  const evmHookModule = await EvmHookModule.create({
-    chain,
-    multiProvider,
-    coreAddresses: {
-      mailbox: chainAddresses.mailbox,
-      proxyAdmin: proxyAdminAddress,
-    },
-    config: hook,
-    contractVerifier,
-    proxyFactoryFactories: extractIsmAndHookFactoryAddresses(chainAddresses),
-  });
-  logger.debug(`Finished creating ${hook.type} Hook for token on ${chain} chain.`);
-  const { deployedHook } = evmHookModule.serialize();
-  return deployedHook;
 }
 
 async function getWarpCoreConfig(
