@@ -1,7 +1,6 @@
 import {
   MultiProtocolProvider,
   TOKEN_COLLATERALIZED_STANDARDS,
-  TokenStandard,
   WarpCoreConfig,
 } from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
@@ -75,7 +74,8 @@ export function WarpDeploymentDeploy() {
         );
         if (coinGeckoId) {
           tokens = tokens.map((token) => {
-            if (token.standard === TokenStandard.EvmHypCollateral) return { ...token, coinGeckoId };
+            if (TOKEN_COLLATERALIZED_STANDARDS.includes(token.standard))
+              return { ...token, coinGeckoId };
             return token;
           });
         }
