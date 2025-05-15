@@ -1,4 +1,9 @@
-import { MultiProtocolProvider, WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import {
+  MultiProtocolProvider,
+  TOKEN_COLLATERALIZED_STANDARDS,
+  TokenStandard,
+  WarpCoreConfig,
+} from '@hyperlane-xyz/sdk';
 import { errorToString } from '@hyperlane-xyz/utils';
 import { Button, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
@@ -58,9 +63,27 @@ export function WarpDeploymentDeploy() {
 
   const onDeploymentSuccess = useCallback(
     (config: WarpCoreConfig) => {
+      let tokens = config.tokens;
+      const hasCollaterizedTokens = tokens.some((token) =>
+        TOKEN_COLLATERALIZED_STANDARDS.includes(token.standard),
+      );
+
+      // prompt for coinGeckoId if at least one token is collaterized
+      if (hasCollaterizedTokens) {
+        const coinGeckoId = prompt(
+          'Please input a coinGeckoId if you wish to include one with this deployment. Leave empty if not',
+        );
+        if (coinGeckoId) {
+          tokens = tokens.map((token) => {
+            if (token.standard === TokenStandard.EvmHypCollateral) return { ...token, coinGeckoId };
+            return token;
+          });
+        }
+      }
+
       completeDeployment(currentIndex, {
         type: DeploymentType.Warp,
-        result: config,
+        result: { ...config, tokens },
       });
       refundAsync().finally(() => setPage(CardPage.WarpSuccess));
     },
