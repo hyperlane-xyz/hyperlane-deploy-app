@@ -16,6 +16,7 @@ export function WarpDeploymentSuccess() {
 
   const deploymentContext = useLatestDeployment();
   const onClickCopyConfig = () => tryCopyConfig(deploymentContext?.result?.result);
+  const onClickCopyDeployConfig = () => tryCopyConfig(deploymentContext?.config.config);
 
   return (
     <div className="flex w-full flex-col items-center space-y-4 py-2 text-md">
@@ -25,15 +26,23 @@ export function WarpDeploymentSuccess() {
         have been refunded.
       </p>
       <H2>Next Steps:</H2>
-      <ol className="space-y-4">
+      <ol className="max-w-sm space-y-4">
         <li>{`1. Protect your route owner accounts ${firstOwnerDisplay}`}</li>
         <li>
           2. Copy and save your{' '}
           <button
             className={clsx(styles.link, 'inline-flex items-center gap-1.5')}
+            onClick={onClickCopyDeployConfig}
+          >
+            <span>Warp Deploy config </span>
+            <CopyIcon width={12} height={12} color={Color.black} />
+          </button>{' '}
+          and{' '}
+          <button
+            className={clsx(styles.link, 'inline-flex items-center gap-1.5')}
             onClick={onClickCopyConfig}
           >
-            <span>Warp Route config</span>
+            <span> Warp Route config </span>
             <CopyIcon width={12} height={12} color={Color.black} />
           </button>
         </li>
