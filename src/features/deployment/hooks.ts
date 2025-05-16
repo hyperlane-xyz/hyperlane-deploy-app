@@ -28,6 +28,7 @@ export function useDeploymentHistory() {
     deployments: s.deployments,
     addDeployment: s.addDeployment,
     updateDeploymentStatus: s.updateDeploymentStatus,
+    updateDeployment: s.updateDeployment,
     completeDeployment: s.completeDeployment,
     failDeployment: s.failDeployment,
   }));
