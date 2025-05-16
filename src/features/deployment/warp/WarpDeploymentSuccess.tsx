@@ -1,3 +1,4 @@
+import { TOKEN_COLLATERALIZED_STANDARDS } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import { CopyIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
@@ -7,11 +8,14 @@ import { H1, H2 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
 import { Color } from '../../../styles/Color';
 import { CoinGeckoConfirmationModal } from '../CoinGeckoConfirmationModal';
-import { useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
+import { useDeploymentHistory, useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
+import { DeploymentType } from '../types';
 import { tryCopyConfig } from '../utils';
+import { CoinGeckoFormValues } from './types';
 
 export function WarpDeploymentSuccess() {
   const { deploymentConfig } = useWarpDeploymentConfig();
+  const { updateDeployment, currentIndex } = useDeploymentHistory();
   const { close, isOpen, open } = useModal();
   const firstOwner = Object.values(deploymentConfig?.config || {})[0]?.owner;
   const firstOwnerDisplay = firstOwner ? ` (${shortenAddress(firstOwner)})` : '';
@@ -21,10 +25,45 @@ export function WarpDeploymentSuccess() {
   const onClickCopyDeployConfig = () => tryCopyConfig(deploymentContext?.config.config);
 
   const onCancelCoinGeckoId = () => {
+    if (deploymentContext.result?.type === DeploymentType.Warp) {
+      const result = deploymentContext.result.result;
+      const tokens = result.tokens.map((token) => ({
+        ...token,
+        coinGeckoId: undefined,
+      }));
+      updateDeployment(currentIndex, {
+        result: { type: DeploymentType.Warp, result: { ...result, tokens } },
+      });
+    }
     close();
   };
 
-  const onConfirmCoinGeckoId = () => [close()];
+  const onConfirmCoinGeckoId = (values: CoinGeckoFormValues) => {
+    if (deploymentContext.result?.type === DeploymentType.Warp) {
+      const result = deploymentContext.result.result;
+      const tokens = result.tokens;
+      const hasCollaterizedTokens = tokens.some((token) =>
+        TOKEN_COLLATERALIZED_STANDARDS.includes(token.standard),
+      );
+
+      // update core config if at least one token is collaterized
+      if (hasCollaterizedTokens) {
+        const tokensWithCoinGeckoId = tokens.map((token) => {
+          if (TOKEN_COLLATERALIZED_STANDARDS.includes(token.standard))
+            return { ...token, coinGeckoId: values.coinGeckoId };
+          return token;
+        });
+        updateDeployment(currentIndex, {
+          result: {
+            type: DeploymentType.Warp,
+            result: { ...result, tokens: tokensWithCoinGeckoId },
+          },
+        });
+      }
+    }
+
+    close();
+  };
 
   return (
     <>

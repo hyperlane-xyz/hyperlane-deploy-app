@@ -86,7 +86,7 @@ function ButtonsSection({ onCancel }: { onCancel: () => void }) {
         Cancel
       </SolidButton>
       <SolidButton color="primary" className="min-w-24 px-4 py-2" type="submit">
-        Continue
+        Confirm
       </SolidButton>
     </div>
   );
