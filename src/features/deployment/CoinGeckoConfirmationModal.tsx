@@ -4,13 +4,12 @@ import { SolidButton } from '../../components/buttons/SolidButton';
 import { TextInput } from '../../components/input/TextField';
 import { A } from '../../components/text/A';
 import { H2 } from '../../components/text/Headers';
+import { POPULAR_COIN_GECKO_IDS } from '../../consts/consts';
 import { links } from '../../consts/links';
 import { Color } from '../../styles/Color';
+import { useLatestDeployment } from './hooks';
+import { DeploymentResult, DeploymentType } from './types';
 import { CoinGeckoFormValues } from './warp/types';
-
-const initialValues: CoinGeckoFormValues = {
-  coinGeckoId: '',
-};
 
 export function CoinGeckoConfirmationModal({
   isOpen,
@@ -21,6 +20,8 @@ export function CoinGeckoConfirmationModal({
   onCancel: () => void;
   onSubmit: (values: CoinGeckoFormValues) => void;
 }) {
+  const { result } = useLatestDeployment();
+  const initialCoinGeckoId = getInitialCoinGeckoId(result);
   return (
     <Modal
       isOpen={isOpen}
@@ -41,7 +42,7 @@ export function CoinGeckoConfirmationModal({
         If you do not wish to include a coinGeckoId, please press cancel
       </p>
       <Formik<CoinGeckoFormValues>
-        initialValues={initialValues}
+        initialValues={{ coinGeckoId: initialCoinGeckoId }}
         validate={validateForm}
         onSubmit={onSubmit}
         validateOnChange={false}
@@ -96,4 +97,22 @@ function validateForm(values: CoinGeckoFormValues) {
   if (!values.coinGeckoId) return { coinGeckoId: 'Field is required' };
 
   return undefined;
+}
+
+function getInitialCoinGeckoId(deployment: DeploymentResult | undefined) {
+  if (!deployment || deployment.type !== DeploymentType.Warp) return '';
+
+  const tokens = deployment.result.tokens;
+  if (!tokens.length) return '';
+
+  const symbol = tokens[0].symbol;
+  const coinGeckoId = tokens.find((token) => token.coinGeckoId)?.coinGeckoId;
+
+  if (coinGeckoId) return coinGeckoId;
+
+  if (POPULAR_COIN_GECKO_IDS[symbol]) {
+    return POPULAR_COIN_GECKO_IDS[symbol];
+  }
+
+  return symbol.toLowerCase();
 }
