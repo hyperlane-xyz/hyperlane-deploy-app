@@ -105,14 +105,9 @@ function getInitialCoinGeckoId(deployment: DeploymentResult | undefined) {
   const tokens = deployment.result.tokens;
   if (!tokens.length) return '';
 
-  const symbol = tokens[0].symbol;
   const coinGeckoId = tokens.find((token) => token.coinGeckoId)?.coinGeckoId;
-
   if (coinGeckoId) return coinGeckoId;
 
-  if (POPULAR_COIN_GECKO_IDS[symbol]) {
-    return POPULAR_COIN_GECKO_IDS[symbol];
-  }
-
-  return symbol.toLowerCase();
+  const symbol = tokens[0].symbol;
+  return POPULAR_COIN_GECKO_IDS[symbol] || symbol.toLowerCase();
 }

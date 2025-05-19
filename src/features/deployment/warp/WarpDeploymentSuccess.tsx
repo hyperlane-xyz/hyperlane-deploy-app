@@ -42,24 +42,18 @@ export function WarpDeploymentSuccess() {
     if (deploymentContext.result?.type === DeploymentType.Warp) {
       const result = deploymentContext.result.result;
       const tokens = result.tokens;
-      const hasCollaterizedTokens = tokens.some((token) =>
-        TOKEN_COLLATERALIZED_STANDARDS.includes(token.standard),
-      );
 
-      // update core config if at least one token is collaterized
-      if (hasCollaterizedTokens) {
-        const tokensWithCoinGeckoId = tokens.map((token) => {
-          if (TOKEN_COLLATERALIZED_STANDARDS.includes(token.standard))
-            return { ...token, coinGeckoId: values.coinGeckoId };
-          return token;
-        });
-        updateDeployment(currentIndex, {
-          result: {
-            type: DeploymentType.Warp,
-            result: { ...result, tokens: tokensWithCoinGeckoId },
-          },
-        });
-      }
+      const tokensWithCoinGeckoId = tokens.map((token) => {
+        if (TOKEN_COLLATERALIZED_STANDARDS.includes(token.standard))
+          return { ...token, coinGeckoId: values.coinGeckoId };
+        return token;
+      });
+      updateDeployment(currentIndex, {
+        result: {
+          type: DeploymentType.Warp,
+          result: { ...result, tokens: tokensWithCoinGeckoId },
+        },
+      });
     }
 
     close();
