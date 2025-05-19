@@ -39,7 +39,7 @@ export function CoinGeckoConfirmationModal({
         >
           their site.
         </A>{' '}
-        If you do not wish to include a coinGeckoId, please press cancel
+        If you do not wish to include a coinGeckoId, please press skip
       </p>
       <Formik<CoinGeckoFormValues>
         initialValues={{ coinGeckoId: initialCoinGeckoId }}
@@ -84,7 +84,7 @@ function ButtonsSection({ onCancel }: { onCancel: () => void }) {
   return (
     <div className="mt-4 flex w-full items-center justify-center gap-12">
       <SolidButton onClick={onCancel} color="gray" className="min-w-24 px-4 py-2">
-        Cancel
+        Skip
       </SolidButton>
       <SolidButton color="primary" className="min-w-24 px-4 py-2" type="submit">
         Confirm
