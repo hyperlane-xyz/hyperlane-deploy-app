@@ -17,4 +17,5 @@ export const links = {
   privacyPolicy: 'https://hyperlane.xyz/privacy-policy',
   bounty:
     'https://github.com/search?q=org:hyperlane-xyz+label:bounty+is:open+is:issue&type=issues&s=&o=desc',
+  coinGecko: 'https://www.coingecko.com/',
 };

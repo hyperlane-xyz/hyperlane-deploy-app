@@ -49,6 +49,10 @@ export interface AppState {
   deployments: DeploymentContext[];
   addDeployment: (t: Omit<DeploymentContext, 'id' | 'timestamp'>) => void;
   updateDeploymentStatus: (i: number, s: DeploymentStatus) => void;
+  updateDeployment: (
+    i: number,
+    deployment: { config?: DeploymentConfig; result?: DeploymentResult },
+  ) => void;
   completeDeployment: (i: number, r: DeploymentResult) => void;
   failDeployment: (i: number, e: string) => void;
   cancelPendingDeployments: () => void;
@@ -121,6 +125,15 @@ export const useStore = create<AppState>()(
           if (i >= state.deployments.length) return state;
           const txs = [...state.deployments];
           txs[i].status = s;
+          return { deployments: txs };
+        });
+      },
+      updateDeployment: (i, deployment) => {
+        set((state) => {
+          if (i >= state.deployments.length) return state;
+          const txs = [...state.deployments];
+          if (deployment.config) txs[i].config = deployment.config;
+          if (deployment.result) txs[i].result = deployment.result;
           return { deployments: txs };
         });
       },

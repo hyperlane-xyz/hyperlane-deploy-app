@@ -9,3 +9,7 @@ export interface WarpDeploymentConfigItem {
 export interface WarpDeploymentFormValues {
   configs: Array<WarpDeploymentConfigItem>;
 }
+
+export interface CoinGeckoFormValues {
+  coinGeckoId: string;
+}
