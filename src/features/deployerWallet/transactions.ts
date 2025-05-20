@@ -50,9 +50,7 @@ export async function sendTxFromWallet(
 ): Promise<TypedTransactionReceipt> {
   if (typedTx.type === ProviderType.EthersV5 && typedWallet.type === ProviderType.EthersV5) {
     const provider = multiProvider.getEthersV5Provider(chainName);
-    const connectedWallet = typedWallet.wallet.connect(provider);
-
-    const response = await connectedWallet.sendTransaction({
+    const response = await typedWallet.wallet.connect(provider).sendTransaction({
       ...typedTx.transaction,
       gasPrice,
     });
