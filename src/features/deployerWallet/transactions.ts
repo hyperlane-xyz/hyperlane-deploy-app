@@ -46,12 +46,14 @@ export async function sendTxFromWallet(
   typedTx: TypedTransaction,
   chainName: ChainName,
   multiProvider: MultiProtocolProvider,
+  gasPrice: number | bigint,
 ): Promise<TypedTransactionReceipt> {
   if (typedTx.type === ProviderType.EthersV5 && typedWallet.type === ProviderType.EthersV5) {
     const provider = multiProvider.getEthersV5Provider(chainName);
-    const response = await typedWallet.wallet
-      .connect(provider)
-      .sendTransaction(typedTx.transaction);
+    const response = await typedWallet.wallet.connect(provider).sendTransaction({
+      ...typedTx.transaction,
+      gasPrice,
+    });
     const receipt = await response.wait();
     return {
       type: ProviderType.EthersV5,

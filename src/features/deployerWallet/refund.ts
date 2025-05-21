@@ -1,9 +1,4 @@
-import {
-  MultiProtocolProvider,
-  Token,
-  TypedTransaction,
-  TypedTransactionReceipt,
-} from '@hyperlane-xyz/sdk';
+import { MultiProtocolProvider, Token, TypedTransactionReceipt } from '@hyperlane-xyz/sdk';
 import { assert, ProtocolType, retryAsync } from '@hyperlane-xyz/utils';
 import { AccountInfo, getAccountAddressForChain, useAccounts } from '@hyperlane-xyz/widgets';
 import { useMutation } from '@tanstack/react-query';
@@ -80,19 +75,18 @@ async function transferBalances(
 
           const estimationTx = await getTransferTx(recipient, balanceAmount, token, multiProvider);
 
-          const adjustedAmount = await computeNetTransferAmount(
-            chainName,
-            estimationTx,
-            balanceAmount,
-            multiProvider,
-            deployerAddress,
-          );
+          const { fee, gasPrice } = await multiProvider.estimateTransactionFee({
+            chainNameOrId: chainName,
+            transaction: estimationTx,
+            sender: deployerAddress,
+          });
+          const adjustedAmount = await computeNetTransferAmount(chainName, balanceAmount, fee);
           if (adjustedAmount <= 0n) return undefined;
 
           const tx = await getTransferTx(recipient, adjustedAmount, token, multiProvider);
 
           const txReceipt = await retryAsync(
-            () => sendTxFromWallet(deployer, tx, chainName, multiProvider),
+            () => sendTxFromWallet(deployer, tx, chainName, multiProvider, gasPrice),
             3,
             2000,
           );
@@ -122,18 +116,7 @@ async function transferBalances(
   }
 }
 
-async function computeNetTransferAmount(
-  chain: ChainName,
-  transaction: TypedTransaction,
-  balance: bigint,
-  multiProvider: MultiProtocolProvider,
-  sender: Address,
-) {
-  const { fee } = await multiProvider.estimateTransactionFee({
-    chainNameOrId: chain,
-    transaction,
-    sender,
-  });
+async function computeNetTransferAmount(chain: ChainName, balance: bigint, fee: number | bigint) {
   logger.debug(`Estimated fee for transfer on ${chain}`, fee);
   // Using BigNumber here because BigInts don't support decimals
   const paddedFee = new BigNumber(fee.toString())
