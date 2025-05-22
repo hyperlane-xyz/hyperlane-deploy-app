@@ -10,7 +10,7 @@ const isDev = process.env.NODE_ENV !== 'production'
 
 // Sometimes useful to disable this during development
 const ENABLE_CSP_HEADER = true;
-const FRAME_SRC_HOSTS = ['https://*.walletconnect.com', 'https://*.walletconnect.org','https://*.solflare.com'];
+const FRAME_SRC_HOSTS = ['https://*.walletconnect.com', 'https://*.walletconnect.org','https://*.solflare.com', ...(isDev ? ['http://localhost:3000'] : [])];
 const STYLE_SRC_HOSTS = []
 const IMG_SRC_HOSTS = ['https://*.walletconnect.com', 'https://*.githubusercontent.com'];
 const cspHeader = `
@@ -36,7 +36,7 @@ const securityHeaders = [
   },
   {
     key: 'X-Frame-Options',
-    value: 'DENY',
+    value: isDev ? 'SAMEORIGIN' : 'DENY',
   },
   {
     key: 'X-Content-Type-Options',

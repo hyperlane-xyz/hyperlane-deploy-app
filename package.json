@@ -47,11 +47,12 @@
     "next": "^15.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-force-graph-2d": "^1.27.1",
     "react-toastify": "^10.0.6",
     "starknetkit": "2.6.1",
     "viem": "^2.21.41",
     "wagmi": "^2.12.26",
-    "yaml": "^2.6.0",
+    "yaml": "^2.8.0",
     "zod": "3.21.4",
     "zod-validation-error": "^3.4.0",
     "zustand": "^4.4.7"
