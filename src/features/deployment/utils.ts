@@ -4,7 +4,7 @@ import { stringify } from 'yaml';
 
 export async function tryCopyConfig(config: unknown | undefined) {
   if (!config) return;
-  const yamlConfig = stringify(config);
+  const yamlConfig = stringify(config, { sortMapEntries: true });
   const result = await tryClipboardSet(yamlConfig);
   if (result) toast.success('Config copied to clipboard');
   else toast.error('Unable to set clipboard');

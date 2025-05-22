@@ -51,7 +51,7 @@ function DeploymentProperty({ name, value }: { name: string; value: string }) {
 }
 
 function CollapsibleData({ data, label }: { data: any; label: string }) {
-  const yamlConfig = stringify(data, { indent: 2 });
+  const yamlConfig = stringify(data, { indent: 2, sortMapEntries: true });
 
   return (
     <Disclosure as="div">
