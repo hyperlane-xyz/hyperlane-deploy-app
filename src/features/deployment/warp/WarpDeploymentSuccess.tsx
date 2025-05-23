@@ -1,16 +1,18 @@
 import { TOKEN_COLLATERALIZED_STANDARDS } from '@hyperlane-xyz/sdk';
-import { shortenAddress } from '@hyperlane-xyz/utils';
+import { objKeys, shortenAddress } from '@hyperlane-xyz/utils';
 import { CopyIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
+import Image from 'next/image';
 import { RestartButton } from '../../../components/buttons/RestartButton';
 import { A } from '../../../components/text/A';
 import { H1, H2 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
+import DownloadIcon from '../../../images/icons/download-icon.svg';
 import { Color } from '../../../styles/Color';
 import { CoinGeckoConfirmationModal } from '../CoinGeckoConfirmationModal';
 import { useDeploymentHistory, useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentType } from '../types';
-import { tryCopyConfig } from '../utils';
+import { downloadYamlFile, tryCopyConfig } from '../utils';
 import { CoinGeckoFormValues } from './types';
 
 export function WarpDeploymentSuccess() {
@@ -23,6 +25,26 @@ export function WarpDeploymentSuccess() {
   const deploymentContext = useLatestDeployment();
   const onClickCopyConfig = () => tryCopyConfig(deploymentContext?.result?.result);
   const onClickCopyDeployConfig = () => tryCopyConfig(deploymentContext?.config.config);
+
+  const downloadDeployConfig = () => {
+    if (!deploymentContext?.config.config || deploymentContext.config.type !== DeploymentType.Warp)
+      return;
+
+    const deployConfigResult = deploymentContext.config.config;
+    const chains = objKeys(deployConfigResult).sort();
+    const filename = `${chains.join('-')}-deploy.yaml`;
+    downloadYamlFile(deployConfigResult, filename);
+  };
+
+  const downloadWarpConfig = () => {
+    if (!deploymentContext?.result?.result || deploymentContext.result.type !== DeploymentType.Warp)
+      return;
+
+    const warpConfigResult = deploymentContext.result.result;
+    const chains = warpConfigResult.tokens.map((token) => token.chainName).sort();
+    const filename = `${chains.join('-')}-config.yaml`;
+    downloadYamlFile(warpConfigResult, filename);
+  };
 
   const onCancelCoinGeckoId = () => {
     if (deploymentContext.result?.type === DeploymentType.Warp) {
@@ -82,22 +104,39 @@ export function WarpDeploymentSuccess() {
             in your deployment config.
           </li>
           <li>
-            3. Copy and save your{' '}
+            3.{' '}
             <button
               className={clsx(styles.link, 'inline-flex items-center gap-1.5')}
               onClick={onClickCopyDeployConfig}
             >
-              <span>Warp Deploy config </span>
+              <span> Copy </span>
               <CopyIcon width={12} height={12} color={Color.black} />
             </button>{' '}
-            and{' '}
+            or{' '}
+            <button
+              className={clsx(styles.link, 'inline-flex items-center')}
+              onClick={downloadDeployConfig}
+            >
+              <span> download </span>
+              <Image src={DownloadIcon} width={20} height={20} alt="download-icon" />
+            </button>{' '}
+            your Warp Deploy Config and{' '}
             <button
               className={clsx(styles.link, 'inline-flex items-center gap-1.5')}
               onClick={onClickCopyConfig}
             >
-              <span> Warp Route config </span>
+              <span> copy </span>
               <CopyIcon width={12} height={12} color={Color.black} />
-            </button>
+            </button>{' '}
+            or{' '}
+            <button
+              className={clsx(styles.link, 'inline-flex items-center')}
+              onClick={downloadWarpConfig}
+            >
+              <span> download </span>
+              <Image src={DownloadIcon} width={20} height={20} alt="download-icon" />
+            </button>{' '}
+            your Warp Route Config.
           </li>
           <li>
             4. Add your route to the{' '}
