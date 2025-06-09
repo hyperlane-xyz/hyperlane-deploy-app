@@ -23,6 +23,7 @@ import {
   executeWarpDeploy,
   getTokenConnectionId,
   isCollateralTokenConfig,
+  isXERC20TokenConfig,
 } from '@hyperlane-xyz/sdk';
 import { ProtocolType, assert, objMap, sleep } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo, useState } from 'react';
@@ -151,9 +152,10 @@ function generateTokenConfigs(
 ): void {
   for (const [chainName, contract] of Object.entries(contracts)) {
     const config = warpDeployConfig[chainName];
-    const collateralAddressOrDenom = isCollateralTokenConfig(config)
-      ? config.token // gets set in the above deriveTokenMetadata()
-      : undefined;
+    const collateralAddressOrDenom =
+      isCollateralTokenConfig(config) || isXERC20TokenConfig(config)
+        ? config.token // gets set in the above deriveTokenMetadata()
+        : undefined;
 
     const decimals: number | undefined = tokenMetadataMap.getDecimals(chainName);
     const name: any = tokenMetadataMap.getName(chainName);
@@ -165,7 +167,7 @@ function generateTokenConfigs(
       chainName,
       standard: TOKEN_TYPE_TO_STANDARD[config.type],
       decimals,
-      symbol,
+      symbol: config.symbol || symbol,
       name,
       addressOrDenom: contract[warpDeployConfig[chainName].type as keyof TokenFactories].address,
       collateralAddressOrDenom,
