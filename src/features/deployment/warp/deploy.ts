@@ -17,12 +17,12 @@ import {
   ProviderType,
   TOKEN_TYPE_TO_STANDARD,
   TokenFactories,
+  TokenMetadataMap,
   WarpCoreConfig,
   WarpRouteDeployConfigMailboxRequired,
   executeWarpDeploy,
   getTokenConnectionId,
   isCollateralTokenConfig,
-  isTokenMetadata,
 } from '@hyperlane-xyz/sdk';
 import { ProtocolType, assert, objMap, sleep } from '@hyperlane-xyz/utils';
 import { useCallback, useMemo, useState } from 'react';
@@ -128,12 +128,12 @@ async function getWarpCoreConfig(
 ): Promise<WarpCoreConfig> {
   const warpCoreConfig: WarpCoreConfig = { tokens: [] };
 
-  const tokenMetadata = await HypERC20Deployer.deriveTokenMetadata(multiProvider, warpDeployConfig);
-  assert(tokenMetadata && isTokenMetadata(tokenMetadata), 'Missing required token metadata');
-  const { decimals, symbol, name } = tokenMetadata;
-  assert(decimals, 'Missing decimals on token metadata');
+  const tokenMetadataMap: TokenMetadataMap = await HypERC20Deployer.deriveTokenMetadata(
+    multiProvider,
+    warpDeployConfig,
+  );
 
-  generateTokenConfigs(warpCoreConfig, warpDeployConfig, contracts, symbol, name, decimals);
+  generateTokenConfigs(warpCoreConfig, warpDeployConfig, contracts, tokenMetadataMap);
 
   fullyConnectTokens(warpCoreConfig);
 
@@ -147,15 +147,19 @@ function generateTokenConfigs(
   warpCoreConfig: WarpCoreConfig,
   warpDeployConfig: WarpRouteDeployConfigMailboxRequired,
   contracts: HyperlaneContractsMap<TokenFactories>,
-  symbol: string,
-  name: string,
-  decimals: number,
+  tokenMetadataMap: TokenMetadataMap,
 ): void {
   for (const [chainName, contract] of Object.entries(contracts)) {
     const config = warpDeployConfig[chainName];
     const collateralAddressOrDenom = isCollateralTokenConfig(config)
       ? config.token // gets set in the above deriveTokenMetadata()
       : undefined;
+
+    const decimals: number | undefined = tokenMetadataMap.getDecimals(chainName);
+    const name: any = tokenMetadataMap.getName(chainName);
+    const symbol: any = tokenMetadataMap.getSymbol(chainName);
+
+    assert(decimals, `Decimals for ${chainName} doesn't exist`);
 
     warpCoreConfig.tokens.push({
       chainName,
