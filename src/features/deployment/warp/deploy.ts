@@ -157,10 +157,11 @@ function generateTokenConfigs(
         : undefined;
 
     const decimals: number | undefined = tokenMetadataMap.getDecimals(chainName);
-    const name: any = tokenMetadataMap.getName(chainName);
-    const symbol: any = tokenMetadataMap.getSymbol(chainName);
+    const name = tokenMetadataMap.getName(chainName);
+    const symbol = tokenMetadataMap.getSymbol(chainName);
 
     assert(decimals, `Decimals for ${chainName} doesn't exist`);
+    assert(name, `Token name for ${chainName} doesn't exist in config`);
 
     warpCoreConfig.tokens.push({
       chainName,
