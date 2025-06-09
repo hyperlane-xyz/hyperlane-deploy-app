@@ -1,13 +1,5 @@
 // TODO: Most of this file has bee copied from the CLI's /src/deploy/warp.ts
 // Long-term, both should be replaced by EvmERC20WarpModule when it's ready for prod
-import { useMutation } from '@tanstack/react-query';
-import { useToastError } from '../../../components/toast/useToastError';
-import { logger } from '../../../utils/logger';
-import { useMultiProvider } from '../../chains/hooks';
-import { DeployerWallets } from '../../deployerWallet/types';
-import { useDeployerWallets } from '../../deployerWallet/wallets';
-import { WarpDeploymentConfig } from '../types';
-// eslint-disable-next-line camelcase
 import { chainAddresses as registryChainAddresses } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
@@ -26,9 +18,16 @@ import {
   isXERC20TokenConfig,
 } from '@hyperlane-xyz/sdk';
 import { ProtocolType, assert, objMap, sleep } from '@hyperlane-xyz/utils';
+import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
+import { useToastError } from '../../../components/toast/useToastError';
+import { logger } from '../../../utils/logger';
+import { useMultiProvider } from '../../chains/hooks';
 import { hasPendingTx } from '../../deployerWallet/transactions';
+import { DeployerWallets } from '../../deployerWallet/types';
+import { useDeployerWallets } from '../../deployerWallet/wallets';
 import { useStore } from '../../store';
+import { WarpDeploymentConfig } from '../types';
 
 const NUM_SECONDS_FOR_TX_WAIT = 10;
 
