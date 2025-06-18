@@ -45,9 +45,9 @@ export function LandingPage() {
         >
           Deploy
         </SolidButton>
-        <SolidButton onClick={createPr} disabled={loading}>
+        {/* <SolidButton onClick={createPr} disabled={loading}>
           Create
-        </SolidButton>
+        </SolidButton> */}
       </div>
     </div>
   );
