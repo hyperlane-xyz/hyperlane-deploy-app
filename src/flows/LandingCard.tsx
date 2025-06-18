@@ -1,10 +1,7 @@
 import Image from 'next/image';
-import { useState } from 'react';
-import { stringify } from 'yaml';
 import { SolidButton } from '../components/buttons/SolidButton';
 import { AUnderline } from '../components/text/A';
 import { links } from '../consts/links';
-import { useLatestDeployment } from '../features/deployment/hooks';
 import BlueWave from '../images/illustrations/blue-wave.svg';
 import SpaceCraft from '../images/illustrations/spacecraft.webp';
 import { CardPage } from './CardPage';
@@ -12,40 +9,6 @@ import { useCardNav } from './hooks';
 
 export function LandingPage() {
   const { setPage } = useCardNav();
-  const [status, setStatus] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { result } = useLatestDeployment();
-
-  const createPr = async () => {
-    setLoading(true);
-    setStatus('');
-    const yamlConfig = stringify(result?.result, { sortMapEntries: true });
-
-    const files = [
-      {
-        path: 'docs/example.yaml',
-        content: yamlConfig,
-      },
-    ];
-
-    try {
-      const res = await fetch('/api/create-pr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Unknown error');
-
-      setStatus(`✅ PR opened: ${data.prUrl}`);
-    } catch (err: any) {
-      setStatus(`❌ Error: ${err.message}`);
-      console.log('error', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="max-w-full space-y-5 p-4 text-center">

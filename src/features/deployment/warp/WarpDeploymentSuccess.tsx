@@ -1,5 +1,5 @@
 import { TOKEN_COLLATERALIZED_STANDARDS } from '@hyperlane-xyz/sdk';
-import { objKeys, shortenAddress } from '@hyperlane-xyz/utils';
+import { shortenAddress } from '@hyperlane-xyz/utils';
 import { CopyIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import Image from 'next/image';
@@ -12,7 +12,12 @@ import { Color } from '../../../styles/Color';
 import { CoinGeckoConfirmationModal } from '../CoinGeckoConfirmationModal';
 import { useDeploymentHistory, useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentType } from '../types';
-import { downloadYamlFile, tryCopyConfig } from '../utils';
+import {
+  downloadYamlFile,
+  getDeployConfigFilename,
+  getWarpConfigFilename,
+  tryCopyConfig,
+} from '../utils';
 import { CoinGeckoFormValues } from './types';
 
 export function WarpDeploymentSuccess() {
@@ -31,8 +36,7 @@ export function WarpDeploymentSuccess() {
       return;
 
     const deployConfigResult = deploymentContext.config.config;
-    const chains = objKeys(deployConfigResult).sort();
-    const filename = `${chains.join('-')}-deploy.yaml`;
+    const filename = getDeployConfigFilename(deployConfigResult);
     downloadYamlFile(deployConfigResult, filename);
   };
 
@@ -41,8 +45,7 @@ export function WarpDeploymentSuccess() {
       return;
 
     const warpConfigResult = deploymentContext.result.result;
-    const chains = warpConfigResult.tokens.map((token) => token.chainName).sort();
-    const filename = `${chains.join('-')}-config.yaml`;
+    const filename = getWarpConfigFilename(warpConfigResult);
     downloadYamlFile(warpConfigResult, filename);
   };
 
