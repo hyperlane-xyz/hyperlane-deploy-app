@@ -24,6 +24,7 @@
     "@interchain-ui/react": "^1.23.28",
     "@metamask/post-message-stream": "6.1.2",
     "@metamask/providers": "10.2.1",
+    "@octokit/rest": "^22.0.0",
     "@rainbow-me/rainbowkit": "^2.2.0",
     "@sentry/nextjs": "^8.38.0",
     "@solana/spl-token": "^0.4.9",
