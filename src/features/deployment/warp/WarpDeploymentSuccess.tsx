@@ -162,6 +162,7 @@ export function WarpDeploymentSuccess() {
         isOpen={isOpen}
         onCancel={onCancelCoinGeckoId}
         onSubmit={onConfirmCoinGeckoId}
+        close={close}
       />
     </>
   );

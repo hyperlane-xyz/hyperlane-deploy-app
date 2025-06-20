@@ -42,7 +42,7 @@ export default async function handler(
     });
 
     const latestCommitSha = refData.object.sha;
-    const newBranch = `${Date.now()}-${symbol}-config`;
+    const newBranch = `${symbol}-config-${Date.now()}`;
 
     // Step 2: Create new branch
     await octokit.git.createRef({

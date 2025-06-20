@@ -1,19 +1,19 @@
 import { WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 import { useMutation } from '@tanstack/react-query';
 import { stringify } from 'yaml';
-import { useToastError } from '../../../components/toast/useToastError';
-import { CreatePrBody, CreatePrResponse } from '../../../types/api';
-import { useLatestDeployment } from '../hooks';
-import { DeploymentType } from '../types';
-import { getDeployConfigFilename, getWarpConfigFilename } from '../utils';
-import { isSyntheticTokenType } from './utils';
+import { useToastError } from '../../components/toast/useToastError';
+import { CreatePrBody, CreatePrResponse } from '../../types/api';
+import { useLatestDeployment } from './hooks';
+import { DeploymentType } from './types';
+import { getDeployConfigFilename, getWarpConfigFilename } from './utils';
+import { isSyntheticTokenType } from './warp/utils';
 
 const warpRoutesPath = 'deployments/warp_routes';
 
-export function useCreateWarpRoutePR() {
+export function useCreateWarpRoutePR(onSuccess: () => void) {
   const { config, result } = useLatestDeployment();
 
-  const { isPending, mutateAsync, error } = useMutation({
+  const { isPending, mutateAsync, error, data } = useMutation({
     mutationKey: ['createWarpRoutePr', config, result],
     mutationFn: () => {
       if (!config.config || config.type !== DeploymentType.Warp) return Promise.resolve(null);
@@ -22,6 +22,7 @@ export function useCreateWarpRoutePR() {
       return createWarpRoutePR(config.config, result.result);
     },
     retry: false,
+    onSuccess,
   });
 
   useToastError(error, 'Error creating PR for Github');
@@ -30,6 +31,7 @@ export function useCreateWarpRoutePR() {
     mutateAsync,
     error,
     isPending,
+    data,
   };
 }
 
