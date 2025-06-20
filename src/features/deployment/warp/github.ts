@@ -1,9 +1,12 @@
 import { WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 import { useMutation } from '@tanstack/react-query';
 import { stringify } from 'yaml';
+import { useToastError } from '../../../components/toast/useToastError';
+import { CreatePrResponse } from '../../../types/api';
 import { useLatestDeployment } from '../hooks';
 import { DeploymentType } from '../types';
 import { getDeployConfigFilename, getWarpConfigFilename } from '../utils';
+import { isSyntheticTokenType } from './utils';
 
 const warpRoutesPath = 'deployments/warp_routes';
 
@@ -21,6 +24,8 @@ export function useCreateWarpRoutePR() {
     retry: false,
   });
 
+  useToastError(error, 'Error creating PR for Github');
+
   return {
     mutateAsync,
     error,
@@ -28,10 +33,17 @@ export function useCreateWarpRoutePR() {
   };
 }
 
-async function createWarpRoutePR(deployConfig: WarpRouteDeployConfig, warpConfig: WarpCoreConfig) {
+async function createWarpRoutePR(
+  deployConfig: WarpRouteDeployConfig,
+  warpConfig: WarpCoreConfig,
+): Promise<CreatePrResponse> {
   const deployConfigFilename = getDeployConfigFilename(deployConfig);
   const warpConfigFilename = getWarpConfigFilename(warpConfig);
-  const symbol = warpConfig.tokens[0].symbol;
+  const firstNonSythetic = Object.values(deployConfig).find((c) => !isSyntheticTokenType(c.type));
+
+  if (!firstNonSythetic) throw new Error('Token types cannot all be synthetic');
+
+  const symbol = firstNonSythetic?.symbol;
 
   const yamlDeployConfig = stringify(deployConfig, { sortMapEntries: true });
   const yamlWarpConfig = stringify(warpConfig, { sortMapEntries: true });

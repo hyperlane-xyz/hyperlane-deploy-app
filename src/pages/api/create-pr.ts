@@ -2,8 +2,12 @@
 import { Octokit } from '@octokit/rest';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serverConfig, ServerConfigSchema } from '../../consts/config.server';
+import { CreatePrError, CreatePrResponse } from '../../types/api';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<CreatePrResponse | CreatePrError>,
+) {
   const serverConfigParseResult = ServerConfigSchema.safeParse(serverConfig);
 
   if (!serverConfigParseResult.success)

@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { SolidButton } from '../components/buttons/SolidButton';
 import { AUnderline } from '../components/text/A';
 import { links } from '../consts/links';
+import { useCreateWarpRoutePR } from '../features/deployment/warp/github';
 import BlueWave from '../images/illustrations/blue-wave.svg';
 import SpaceCraft from '../images/illustrations/spacecraft.webp';
 import { CardPage } from './CardPage';
@@ -9,6 +10,12 @@ import { useCardNav } from './hooks';
 
 export function LandingPage() {
   const { setPage } = useCardNav();
+  const { mutateAsync, isPending } = useCreateWarpRoutePR();
+
+  const handleCreatePr = async () => {
+    const data = await mutateAsync();
+    if (data) console.log('data', data.prUrl);
+  };
 
   return (
     <div className="max-w-full space-y-5 p-4 text-center">
@@ -45,9 +52,9 @@ export function LandingPage() {
         >
           Deploy
         </SolidButton>
-        {/* <SolidButton onClick={createPr} disabled={loading}>
+        <SolidButton onClick={handleCreatePr} disabled={isPending}>
           Create
-        </SolidButton> */}
+        </SolidButton>
       </div>
     </div>
   );
