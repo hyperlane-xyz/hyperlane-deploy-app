@@ -2,7 +2,7 @@ import { WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 import { useMutation } from '@tanstack/react-query';
 import { stringify } from 'yaml';
 import { useToastError } from '../../../components/toast/useToastError';
-import { CreatePrResponse } from '../../../types/api';
+import { CreatePrBody, CreatePrResponse } from '../../../types/api';
 import { useLatestDeployment } from '../hooks';
 import { DeploymentType } from '../types';
 import { getDeployConfigFilename, getWarpConfigFilename } from '../utils';
@@ -43,21 +43,25 @@ async function createWarpRoutePR(
 
   if (!firstNonSythetic) throw new Error('Token types cannot all be synthetic');
 
-  const symbol = firstNonSythetic?.symbol;
+  const symbol = firstNonSythetic.symbol;
 
   const yamlDeployConfig = stringify(deployConfig, { sortMapEntries: true });
   const yamlWarpConfig = stringify(warpConfig, { sortMapEntries: true });
 
   const basePath = `${warpRoutesPath}/${symbol}`;
-  const files: DeployFile[] = [
-    { content: yamlDeployConfig, path: `${basePath}/${deployConfigFilename}` },
-    { content: yamlWarpConfig, path: `${basePath}/${warpConfigFilename}` },
-  ];
+  const files: CreatePrBody = {
+    deployConfig: { content: yamlDeployConfig, path: `${basePath}/${deployConfigFilename}` },
+    warpConfig: { content: yamlWarpConfig, path: `${basePath}/${warpConfigFilename}` },
+  };
 
   const res = await fetch('/api/create-pr', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ files }),
+    body: JSON.stringify({
+      deployConfig: files.deployConfig,
+      warpConfig: files.warpConfig,
+      symbol,
+    }),
   });
 
   const data = await res.json();
@@ -65,8 +69,3 @@ async function createWarpRoutePR(
 
   return data;
 }
-
-type DeployFile = {
-  path: string;
-  content: string;
-};
