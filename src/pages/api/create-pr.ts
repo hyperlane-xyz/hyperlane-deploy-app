@@ -3,8 +3,14 @@ import { WarpCoreConfigSchema, WarpRouteDeployConfigSchema } from '@hyperlane-xy
 import { Octokit } from '@octokit/rest';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serverConfig, ServerConfigSchema } from '../../consts/config.server';
-import { CreatePrBody, CreatePrError, CreatePrResponse } from '../../types/api';
-import { validateStringToZodSchema } from '../../utils/zod';
+import {
+  CreatePrBody,
+  CreatePrError,
+  CreatePrResponse,
+  GithubIdentity,
+  GitHubIdentitySchema,
+} from '../../types/api';
+import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
 
 export default async function handler(
   req: NextApiRequest,
@@ -20,9 +26,18 @@ export default async function handler(
     serverConfigParseResult.data;
   const octokit = new Octokit({ auth: githubToken });
 
-  const { deployConfig, warpConfig, symbol } = req.body as CreatePrBody & { symbol: string };
+  const { deployConfig, warpConfig, symbol, organization, username } = req.body as CreatePrBody &
+    GithubIdentity & { symbol: string };
+
   if (!deployConfig || !warpConfig || !symbol)
     return res.status(400).json({ error: 'Missing config files to create PR' });
+
+  const githubInformationResult = GitHubIdentitySchema.safeParse({ organization, username });
+
+  if (!githubInformationResult.success) {
+    const githubInfoError = zodErrorToString(githubInformationResult.error);
+    return res.status(400).json({ error: githubInfoError });
+  }
 
   const deployConfigResult = validateStringToZodSchema(
     deployConfig.content,
@@ -64,6 +79,11 @@ export default async function handler(
       });
     }
 
+    const { username, organization } = githubInformationResult.data;
+    const githubInfo = [username && `by ${username}`, organization && `from ${organization}`]
+      .filter(Boolean)
+      .join(' ');
+
     // Step 4: Create a PR from the fork branch to upstream main
     const { data: pr } = await octokit.pulls.create({
       owner: githubUpstreamOwner,
@@ -71,7 +91,9 @@ export default async function handler(
       title: `feat: add ${symbol} deploy artifacts`,
       head: `${githubForkOwner}:${newBranch}`,
       base: githubBaseBranch,
-      body: `This PR was created from the deploy app to add ${symbol} deploy artifacts`,
+      body: `This PR was created from the deploy app to add ${symbol} deploy artifacts.${
+        githubInfo ? `\n\nThis config was provided ${githubInfo}.` : ''
+      }`,
     });
 
     return res.status(200).json({ success: true, prUrl: pr.html_url });

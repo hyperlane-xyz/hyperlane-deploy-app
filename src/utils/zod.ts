@@ -7,6 +7,17 @@ export function zodErrorToString<T>(err: ZodError<T>) {
   return errorMsg.replace(/^Validation error: /, '');
 }
 
+export function zodErrorToFormikErrors(error: ZodError): Record<string, string> {
+  const formikErrors: Record<string, string> = {};
+
+  for (const issue of error.errors) {
+    const path = issue.path.join('.');
+    formikErrors[path] = issue.message;
+  }
+
+  return formikErrors;
+}
+
 export function validateStringToZodSchema<T>(input: string, schema: ZodType<T>) {
   const parsedInput = tryParseJsonOrYaml(input);
   if (!parsedInput.success) return null;

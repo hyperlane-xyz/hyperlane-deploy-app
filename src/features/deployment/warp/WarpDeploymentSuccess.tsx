@@ -3,13 +3,17 @@ import { shortenAddress } from '@hyperlane-xyz/utils';
 import { CopyIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import Image from 'next/image';
+import { useCallback, useState } from 'react';
 import { RestartButton } from '../../../components/buttons/RestartButton';
 import { A } from '../../../components/text/A';
 import { H1, H2 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
 import DownloadIcon from '../../../images/icons/download-icon.svg';
+import FolderCodeIcon from '../../../images/icons/folder-code-icon.svg';
 import { Color } from '../../../styles/Color';
 import { CoinGeckoConfirmationModal } from '../CoinGeckoConfirmationModal';
+import { CreateRegistryPrModal } from '../CreateRegistryPrModal';
+import { useCreateWarpRoutePR } from '../github';
 import { useDeploymentHistory, useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentType } from '../types';
 import {
@@ -24,6 +28,13 @@ export function WarpDeploymentSuccess() {
   const { deploymentConfig } = useWarpDeploymentConfig();
   const { updateDeployment, currentIndex } = useDeploymentHistory();
   const { close, isOpen, open } = useModal();
+  const { close: closeCreatePr, isOpen: isCreatePrOpen, open: openCreatePr } = useModal();
+  const [hasSubmittedPr, setHasSubmittedPr] = useState(false);
+
+  const onPrCreationSuccess = useCallback(() => setHasSubmittedPr(true), []);
+
+  const { mutate, isPending, data: createPrData } = useCreateWarpRoutePR(onPrCreationSuccess);
+
   const firstOwner = Object.values(deploymentConfig?.config || {})[0]?.owner;
   const firstOwnerDisplay = firstOwner ? ` (${shortenAddress(firstOwner)})` : '';
 
@@ -145,7 +156,15 @@ export function WarpDeploymentSuccess() {
             4. Add your route to the{' '}
             <A className={styles.link} href={links.registry}>
               Hyperlane Registry
-            </A>
+            </A>{' '}
+            or you can open a PR by clicking{' '}
+            <button
+              className={clsx(styles.link, 'inline-flex items-center gap-1')}
+              onClick={openCreatePr}
+            >
+              <span> here </span>
+              <Image src={FolderCodeIcon} width={20} height={20} alt="download-icon" />
+            </button>
           </li>
           <li>
             5.{' '}
@@ -163,6 +182,16 @@ export function WarpDeploymentSuccess() {
         onCancel={onCancelCoinGeckoId}
         onSubmit={onConfirmCoinGeckoId}
         close={close}
+      />
+      <CreateRegistryPrModal
+        isOpen={isCreatePrOpen}
+        onCancel={closeCreatePr}
+        onConfirm={() => {
+          //
+        }}
+        confirmDisabled={hasSubmittedPr}
+        disabled={isPending}
+        data={createPrData}
       />
     </>
   );

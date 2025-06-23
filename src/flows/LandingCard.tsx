@@ -18,9 +18,7 @@ export function LandingPage() {
 
   const onPrCreationSuccess = useCallback(() => setHasSubmittedPr(true), []);
 
-  const { mutateAsync, isPending, data } = useCreateWarpRoutePR(onPrCreationSuccess);
-
-  const handleCreatePr = async () => await mutateAsync();
+  const { mutate, isPending, data } = useCreateWarpRoutePR(onPrCreationSuccess);
 
   return (
     <>
@@ -72,7 +70,7 @@ export function LandingPage() {
       <CreateRegistryPrModal
         isOpen={isOpen}
         onCancel={close}
-        onConfirm={handleCreatePr}
+        onConfirm={mutate}
         confirmDisabled={hasSubmittedPr}
         disabled={isPending}
         data={data}
