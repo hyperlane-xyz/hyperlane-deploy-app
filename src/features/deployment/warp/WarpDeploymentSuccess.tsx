@@ -20,6 +20,7 @@ import {
   downloadYamlFile,
   getDeployConfigFilename,
   getWarpConfigFilename,
+  sortWarpCoreConfig,
   tryCopyConfig,
 } from '../utils';
 import { CoinGeckoFormValues } from './types';
@@ -39,7 +40,8 @@ export function WarpDeploymentSuccess() {
   const firstOwnerDisplay = firstOwner ? ` (${shortenAddress(firstOwner)})` : '';
 
   const deploymentContext = useLatestDeployment();
-  const onClickCopyConfig = () => tryCopyConfig(deploymentContext?.result?.result);
+  const onClickCopyConfig = () =>
+    tryCopyConfig(sortWarpCoreConfig(deploymentContext?.result?.result));
   const onClickCopyDeployConfig = () => tryCopyConfig(deploymentContext?.config.config);
 
   const downloadDeployConfig = () => {
@@ -55,7 +57,9 @@ export function WarpDeploymentSuccess() {
     if (!deploymentContext?.result?.result || deploymentContext.result.type !== DeploymentType.Warp)
       return;
 
-    const warpConfigResult = deploymentContext.result.result;
+    const warpConfigResult = sortWarpCoreConfig(deploymentContext.result.result);
+    if (!warpConfigResult) return;
+
     const filename = getWarpConfigFilename(warpConfigResult);
     downloadYamlFile(warpConfigResult, filename);
   };

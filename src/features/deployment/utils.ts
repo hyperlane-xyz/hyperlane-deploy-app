@@ -39,3 +39,24 @@ export function getWarpConfigFilename(config: WarpCoreConfig) {
   const chains = config.tokens.map((token) => token.chainName).sort();
   return `${chains.join('-')}-config.yaml`;
 }
+
+export function sortWarpCoreConfig(warpCoreConfig?: WarpCoreConfig): WarpCoreConfig | undefined {
+  if (!warpCoreConfig) return undefined;
+
+  const tokens = warpCoreConfig.tokens;
+
+  const sortedTokens = [...tokens]
+    .sort((a, b) => a.chainName.localeCompare(b.chainName))
+    .map((token) => ({
+      ...token,
+      connections: token.connections
+        ? [...token.connections].sort((a, b) => {
+            const chainA = a.token.split('|')[1] || '';
+            const chainB = b.token.split('|')[1] || '';
+            return chainA.localeCompare(chainB);
+          })
+        : undefined,
+    }));
+
+  return { ...warpCoreConfig, tokens: sortedTokens };
+}
