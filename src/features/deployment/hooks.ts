@@ -40,7 +40,7 @@ export function useDeploymentHistory() {
 
 export function useLatestDeployment() {
   const { deployments, currentIndex } = useDeploymentHistory();
-  return deployments[2];
+  return deployments[currentIndex];
 }
 
 export function usePastDeploymentChains() {

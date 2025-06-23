@@ -186,9 +186,7 @@ export function WarpDeploymentSuccess() {
       <CreateRegistryPrModal
         isOpen={isCreatePrOpen}
         onCancel={closeCreatePr}
-        onConfirm={() => {
-          //
-        }}
+        onConfirm={mutate}
         confirmDisabled={hasSubmittedPr}
         disabled={isPending}
         data={createPrData}
