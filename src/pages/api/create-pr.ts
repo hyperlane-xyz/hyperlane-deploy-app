@@ -1,12 +1,14 @@
 // pages/api/open-pr.ts
 import { WarpCoreConfigSchema, WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
 import { Octokit } from '@octokit/rest';
+import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serverConfig, ServerConfigSchema } from '../../consts/config.server';
 import {
   CreatePrBody,
   CreatePrError,
   CreatePrResponse,
+  DeployFile,
   GithubIdentity,
   GitHubIdentitySchema,
 } from '../../types/api';
@@ -49,7 +51,7 @@ export default async function handler(
   if (!warpConfigResult) return res.status(400).json({ error: 'Invalid warp config' });
 
   try {
-    // Step 1: Get latest SHA of base branch in fork
+    // Get latest SHA of base branch in fork
     const { data: refData } = await octokit.git.getRef({
       owner: githubForkOwner,
       repo: githubRepoName,
@@ -59,7 +61,7 @@ export default async function handler(
     const latestCommitSha = refData.object.sha;
     const newBranch = `${symbol}-config-${Date.now()}`;
 
-    // Step 2: Create new branch
+    // Create new branch
     await octokit.git.createRef({
       owner: githubForkOwner,
       repo: githubRepoName,
@@ -67,8 +69,10 @@ export default async function handler(
       sha: latestCommitSha,
     });
 
-    // Step 3: Upload files to the new branch
-    for (const file of [deployConfig, warpConfig]) {
+    const changesetFile = writeChangeset(`Add ${symbol} deploy artifacts`);
+
+    // Upload files to the new branch
+    for (const file of [deployConfig, warpConfig, changesetFile]) {
       await octokit.repos.createOrUpdateFileContents({
         owner: githubForkOwner,
         repo: githubRepoName,
@@ -84,7 +88,7 @@ export default async function handler(
       .filter(Boolean)
       .join(' ');
 
-    // Step 4: Create a PR from the fork branch to upstream main
+    // Create a PR from the fork branch to upstream main
     const { data: pr } = await octokit.pulls.create({
       owner: githubUpstreamOwner,
       repo: githubRepoName,
@@ -100,4 +104,20 @@ export default async function handler(
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
+}
+
+// adapted from https://github.com/changesets/changesets/blob/main/packages/write/src/index.ts
+// so that it could be used in the deploy app
+function writeChangeset(description: string): DeployFile {
+  const id = humanId({ separator: '-', capitalize: false });
+  const filename = `${id}.md`;
+
+  const content = `---
+'@hyperlane-xyz/registry': minor
+---
+
+${description.trim()}
+`;
+
+  return { path: `.changset/${filename}`, content };
 }
