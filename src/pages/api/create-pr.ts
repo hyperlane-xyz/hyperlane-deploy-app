@@ -8,7 +8,6 @@ import {
   CreatePrBody,
   CreatePrResponse,
   DeployFile,
-  GithubIdentity,
   GitHubIdentitySchema,
 } from '../../types/api';
 import { sendJsonResponse } from '../../utils/api';
@@ -35,10 +34,10 @@ export default async function handler(
     });
   }
 
-  const { deployConfig, warpConfig, symbol, organization, username } = req.body as CreatePrBody &
-    GithubIdentity & { symbol: string };
+  const { deployConfig, warpConfig, warpRouteId, organization, username } =
+    req.body as CreatePrBody;
 
-  if (!deployConfig || !warpConfig || !symbol)
+  if (!deployConfig || !warpConfig || !warpRouteId)
     return sendJsonResponse(res, 400, { error: 'Missing config files to create PR' });
 
   const githubInformationResult = GitHubIdentitySchema.safeParse({ organization, username });
@@ -66,7 +65,7 @@ export default async function handler(
     });
 
     const latestCommitSha = refData.object.sha;
-    const newBranch = `${symbol}-config-${Date.now()}`;
+    const newBranch = `${warpRouteId}-config-${Date.now()}`;
 
     // Create new branch
     await octokit.git.createRef({
@@ -76,7 +75,7 @@ export default async function handler(
       sha: latestCommitSha,
     });
 
-    const changesetFile = writeChangeset(`Add ${symbol} deploy artifacts`);
+    const changesetFile = writeChangeset(`Add ${warpRouteId} warp route deploy artifacts`);
 
     // Upload files to the new branch
     for (const file of [deployConfig, warpConfig, changesetFile]) {
@@ -99,10 +98,10 @@ export default async function handler(
     const { data: pr } = await octokit.pulls.create({
       owner: githubUpstreamOwner,
       repo: githubRepoName,
-      title: `feat: add ${symbol} deploy artifacts`,
+      title: `feat: add ${warpRouteId} warp route deploy artifacts`,
       head: `${githubForkOwner}:${newBranch}`,
       base: githubBaseBranch,
-      body: `This PR was created from the deploy app to add ${symbol} deploy artifacts.${
+      body: `This PR was created from the deploy app to add ${warpRouteId} warp route deploy artifacts.${
         githubInfo ? `\n\nThis config was provided ${githubInfo}.` : ''
       }`,
     });

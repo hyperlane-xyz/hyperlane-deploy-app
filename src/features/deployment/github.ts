@@ -1,3 +1,4 @@
+import { BaseRegistry } from '@hyperlane-xyz/registry';
 import { WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 import { useMutation } from '@tanstack/react-query';
 import { stringify } from 'yaml';
@@ -46,27 +47,28 @@ async function createWarpRoutePR(
   const warpConfigFilename = getWarpConfigFilename(warpConfig);
   const firstNonSynthetic = Object.values(deployConfig).find((c) => !isSyntheticTokenType(c.type));
 
-  if (!firstNonSynthetic) throw new Error('Token types cannot all be synthetic');
+  if (!firstNonSynthetic || !firstNonSynthetic.symbol)
+    throw new Error('Token types cannot all be synthetic');
 
   const symbol = firstNonSynthetic.symbol;
+  const warpRouteId = BaseRegistry.warpRouteConfigToId(warpConfig, { symbol });
 
   const yamlDeployConfig = stringify(deployConfig, { sortMapEntries: true });
   const yamlWarpConfig = stringify(warpConfig, { sortMapEntries: true });
 
   const basePath = `${warpRoutesPath}/${symbol}`;
-  const files: CreatePrBody = {
+  const requestBody: CreatePrBody = {
+    ...normalizeEmptyStrings(githubInformation),
     deployConfig: { content: yamlDeployConfig, path: `${basePath}/${deployConfigFilename}` },
     warpConfig: { content: yamlWarpConfig, path: `${basePath}/${warpConfigFilename}` },
+    warpRouteId,
   };
 
   const res = await fetch('/api/create-pr', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      deployConfig: files.deployConfig,
-      warpConfig: files.warpConfig,
-      symbol,
-      ...normalizeEmptyStrings(githubInformation),
+      ...requestBody,
     }),
   });
 

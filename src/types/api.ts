@@ -23,11 +23,6 @@ export interface DeployFile {
   content: string;
 }
 
-export interface CreatePrBody {
-  deployConfig: DeployFile;
-  warpConfig: DeployFile;
-}
-
 const githubNameRegex = /^(?!-)(?!.*--)[a-zA-Z0-9-]{1,39}(?<!-)$/;
 export const GitHubIdentitySchema = z.object({
   username: z
@@ -45,3 +40,9 @@ export const GitHubIdentitySchema = z.object({
 });
 
 export type GithubIdentity = z.infer<typeof GitHubIdentitySchema>;
+
+export type CreatePrBody = {
+  deployConfig: DeployFile;
+  warpConfig: DeployFile;
+  warpRouteId: string;
+} & GithubIdentity;
