@@ -3,12 +3,12 @@ import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serverConfig } from '../../consts/config.server';
 import { getOctokitClient } from '../../libs/github';
-import { ApiError } from '../../types/api';
+import { ApiError, ApiSuccess } from '../../types/api';
 import {
   CreatePrBody,
+  CreatePrBodySchema,
   CreatePrResponse,
   DeployFile,
-  GitHubIdentitySchema,
 } from '../../types/createPr';
 import { sendJsonResponse } from '../../utils/api';
 import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
@@ -34,27 +34,12 @@ export default async function handler(
     });
   }
 
-  const { deployConfig, warpConfig, warpRouteId, organization, username } =
-    req.body as CreatePrBody;
+  const requestBody = validateRequestBody(req.body);
+  if (!requestBody.success) return sendJsonResponse(res, 400, { error: requestBody.error });
 
-  if (!deployConfig || !warpConfig || !warpRouteId)
-    return sendJsonResponse(res, 400, { error: 'Missing config files to create PR' });
-
-  const githubInformationResult = GitHubIdentitySchema.safeParse({ organization, username });
-
-  if (!githubInformationResult.success) {
-    const githubInfoError = zodErrorToString(githubInformationResult.error);
-    return sendJsonResponse(res, 400, { error: githubInfoError });
-  }
-
-  const deployConfigResult = validateStringToZodSchema(
-    deployConfig.content,
-    WarpRouteDeployConfigSchema,
-  );
-  if (!deployConfigResult) sendJsonResponse(res, 400, { error: 'Invalid deploy config' });
-
-  const warpConfigResult = validateStringToZodSchema(warpConfig.content, WarpCoreConfigSchema);
-  if (!warpConfigResult) return sendJsonResponse(res, 400, { error: 'Invalid warp config' });
+  const {
+    data: { deployConfig, warpConfig, warpRouteId, organization, username },
+  } = requestBody;
 
   try {
     // Get latest SHA of base branch in fork
@@ -89,7 +74,6 @@ export default async function handler(
       });
     }
 
-    const { username, organization } = githubInformationResult.data;
     const githubInfo = [username && `by ${username}`, organization && `from ${organization}`]
       .filter(Boolean)
       .join(' ');
@@ -110,6 +94,37 @@ export default async function handler(
   } catch (err: any) {
     return sendJsonResponse(res, 500, { error: err.message });
   }
+}
+
+export function validateRequestBody(body: unknown): ApiError | ApiSuccess<CreatePrBody> {
+  if (!body) return { error: 'Missing request body' };
+
+  const parsedBody = CreatePrBodySchema.safeParse(body);
+  if (!parsedBody.success) {
+    return { error: zodErrorToString(parsedBody.error) };
+  }
+
+  const { deployConfig, warpConfig, warpRouteId, organization, username } = parsedBody.data;
+
+  const deployConfigResult = validateStringToZodSchema(
+    deployConfig.content,
+    WarpRouteDeployConfigSchema,
+  );
+  if (!deployConfigResult) return { error: 'Invalid deploy config content' };
+
+  const warpConfigResult = validateStringToZodSchema(warpConfig.content, WarpCoreConfigSchema);
+  if (!warpConfigResult) return { error: 'Invalid warp config content' };
+
+  return {
+    success: true,
+    data: {
+      deployConfig,
+      warpConfig,
+      warpRouteId,
+      organization,
+      username,
+    },
+  };
 }
 
 // adapted from https://github.com/changesets/changesets/blob/main/packages/write/src/index.ts
