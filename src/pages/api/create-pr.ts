@@ -100,9 +100,7 @@ export function validateRequestBody(body: unknown): ApiError | ApiSuccess<Create
   if (!body) return { error: 'Missing request body' };
 
   const parsedBody = CreatePrBodySchema.safeParse(body);
-  if (!parsedBody.success) {
-    return { error: zodErrorToString(parsedBody.error) };
-  }
+  if (!parsedBody.success) return { error: zodErrorToString(parsedBody.error) };
 
   const { deployConfig, warpConfig, warpRouteId, organization, username } = parsedBody.data;
 
