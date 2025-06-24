@@ -1,54 +1,61 @@
-// pages/api/open-pr.ts
 import { WarpCoreConfigSchema, WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
-import { Octokit } from '@octokit/rest';
 import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { serverConfig, ServerConfigSchema } from '../../consts/config.server';
+import { serverConfig } from '../../consts/config.server';
+import { getOctokitClient } from '../../libs/github';
 import {
+  ApiError,
   CreatePrBody,
-  CreatePrError,
   CreatePrResponse,
   DeployFile,
   GithubIdentity,
   GitHubIdentitySchema,
 } from '../../types/api';
+import { sendJsonResponse } from '../../utils/api';
 import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<CreatePrResponse | CreatePrError>,
+  res: NextApiResponse<CreatePrResponse | ApiError>,
 ) {
-  const serverConfigParseResult = ServerConfigSchema.safeParse(serverConfig);
-  if (!serverConfigParseResult.success)
-    return res.status(500).json({
-      error: 'Missing Github configurations, check your environment variables',
+  const {
+    githubBaseBranch,
+    githubForkOwner,
+    githubRepoName,
+    githubUpstreamOwner,
+    serverEnvironment,
+  } = serverConfig;
+  const octokit = getOctokitClient();
+  if (!octokit) {
+    return sendJsonResponse(res, 500, {
+      error:
+        serverEnvironment === 'development'
+          ? 'Missing Github configurations, check your environment variables'
+          : 'Internal Server Error',
     });
-
-  const { githubBaseBranch, githubForkOwner, githubRepoName, githubToken, githubUpstreamOwner } =
-    serverConfigParseResult.data;
-  const octokit = new Octokit({ auth: githubToken });
+  }
 
   const { deployConfig, warpConfig, symbol, organization, username } = req.body as CreatePrBody &
     GithubIdentity & { symbol: string };
 
   if (!deployConfig || !warpConfig || !symbol)
-    return res.status(400).json({ error: 'Missing config files to create PR' });
+    return sendJsonResponse(res, 400, { error: 'Missing config files to create PR' });
 
   const githubInformationResult = GitHubIdentitySchema.safeParse({ organization, username });
 
   if (!githubInformationResult.success) {
     const githubInfoError = zodErrorToString(githubInformationResult.error);
-    return res.status(400).json({ error: githubInfoError });
+    return sendJsonResponse(res, 400, { error: githubInfoError });
   }
 
   const deployConfigResult = validateStringToZodSchema(
     deployConfig.content,
     WarpRouteDeployConfigSchema,
   );
-  if (!deployConfigResult) return res.status(400).json({ error: 'Invalid deploy config' });
+  if (!deployConfigResult) sendJsonResponse(res, 400, { error: 'Invalid deploy config' });
 
   const warpConfigResult = validateStringToZodSchema(warpConfig.content, WarpCoreConfigSchema);
-  if (!warpConfigResult) return res.status(400).json({ error: 'Invalid warp config' });
+  if (!warpConfigResult) return sendJsonResponse(res, 400, { error: 'Invalid warp config' });
 
   try {
     // Get latest SHA of base branch in fork
@@ -100,9 +107,9 @@ export default async function handler(
       }`,
     });
 
-    return res.status(200).json({ success: true, prUrl: pr.html_url });
+    return sendJsonResponse(res, 200, { data: { prUrl: pr.html_url }, success: true });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return sendJsonResponse(res, 500, { error: err.message });
   }
 }
 

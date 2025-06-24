@@ -21,6 +21,10 @@ export const ServerConfigSchema = z.object({
     .string()
     .min(1, 'GITHUB_TOKEN is required')
     .describe('GitHub token of the fork owner with repo/pull access'),
+  serverEnvironment: z
+    .string()
+    .optional()
+    .describe('The environment currently running on the server'),
 });
 
 export type ServerConfig = z.infer<typeof ServerConfigSchema>;
@@ -30,6 +34,7 @@ const githubRepoName = process.env.GITHUB_REPO || '';
 const githubUpstreamOwner = process.env.GITHUB_UPSTREAM_OWNER || '';
 const githubBaseBranch = 'main';
 const githubToken = process.env.GITHUB_TOKEN || '';
+const serverEnvironment = process.env.SERVER_ENVIRONMENT || 'production';
 
 export const serverConfig: ServerConfig = Object.freeze({
   githubForkOwner,
@@ -37,4 +42,5 @@ export const serverConfig: ServerConfig = Object.freeze({
   githubUpstreamOwner,
   githubBaseBranch,
   githubToken,
+  serverEnvironment,
 });

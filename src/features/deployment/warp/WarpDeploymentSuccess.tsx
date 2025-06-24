@@ -193,7 +193,7 @@ export function WarpDeploymentSuccess() {
         onConfirm={mutate}
         confirmDisabled={hasSubmittedPr}
         disabled={isPending}
-        data={createPrData}
+        response={createPrData}
       />
     </>
   );

@@ -16,14 +16,14 @@ export function CreateRegistryPrModal({
   onConfirm,
   confirmDisabled,
   disabled,
-  data,
+  response,
 }: {
   isOpen: boolean;
   disabled: boolean;
   confirmDisabled: boolean;
   onCancel: () => void;
   onConfirm: (values: GithubIdentity) => void;
-  data: CreatePrResponse | null | undefined;
+  response: CreatePrResponse | null | undefined;
 }) {
   return (
     <Modal
@@ -53,12 +53,12 @@ export function CreateRegistryPrModal({
       >
         {() => (
           <Form className="w-full">
-            {data && data.success ? (
+            {response && response.success ? (
               <div className={`${styles.text} w-full`}>
                 <p>This is the link to your PR:</p>
                 <div className="w-full space-y-2 rounded-lg bg-blue-500/5 px-3 py-4">
-                  <A className={styles.link} href={data.prUrl}>
-                    {data.prUrl}
+                  <A className={styles.link} href={response.data.prUrl}>
+                    {response.data.prUrl}
                   </A>
                 </div>
               </div>

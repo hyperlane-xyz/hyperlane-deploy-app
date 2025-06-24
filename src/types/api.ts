@@ -1,14 +1,22 @@
 import { z } from 'zod';
 
-export interface CreatePrResponse {
-  success: true;
-  prUrl: string;
-}
-
-export interface CreatePrError {
+export interface ApiError {
   success?: false;
   error: string;
 }
+
+export interface ApiSuccess<T> {
+  success: true;
+  data: T;
+}
+
+export type ApiResponseBody<T> = ApiSuccess<T> | ApiError;
+
+export interface CreatePrData {
+  prUrl: string;
+}
+
+export type CreatePrResponse = ApiResponseBody<CreatePrData>;
 
 export interface DeployFile {
   path: string;
