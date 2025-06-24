@@ -3,7 +3,7 @@ import { WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
 import { useMutation } from '@tanstack/react-query';
 import { stringify } from 'yaml';
 import { useToastError } from '../../components/toast/useToastError';
-import { CreatePrBody, CreatePrResponse, GithubIdentity } from '../../types/api';
+import { CreatePrBody, CreatePrResponse, GithubIdentity } from '../../types/createPr';
 import { normalizeEmptyStrings } from '../../utils/string';
 import { useLatestDeployment } from './hooks';
 import { DeploymentType } from './types';

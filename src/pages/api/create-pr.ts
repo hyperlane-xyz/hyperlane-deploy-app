@@ -3,13 +3,13 @@ import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serverConfig } from '../../consts/config.server';
 import { getOctokitClient } from '../../libs/github';
+import { ApiError } from '../../types/api';
 import {
-  ApiError,
   CreatePrBody,
   CreatePrResponse,
   DeployFile,
   GitHubIdentitySchema,
-} from '../../types/api';
+} from '../../types/createPr';
 import { sendJsonResponse } from '../../utils/api';
 import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
 

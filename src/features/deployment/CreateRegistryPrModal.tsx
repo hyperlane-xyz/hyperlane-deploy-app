@@ -6,7 +6,7 @@ import { A } from '../../components/text/A';
 import { H2 } from '../../components/text/Headers';
 import { links } from '../../consts/links';
 import { Color } from '../../styles/Color';
-import { CreatePrResponse, GithubIdentity, GitHubIdentitySchema } from '../../types/api';
+import { CreatePrResponse, GithubIdentity, GitHubIdentitySchema } from '../../types/createPr';
 import { normalizeEmptyStrings } from '../../utils/string';
 import { zodErrorToFormikErrors } from '../../utils/zod';
 
