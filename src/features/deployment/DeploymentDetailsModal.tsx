@@ -7,6 +7,7 @@ import { useMultiProvider } from '../chains/hooks';
 import { getChainDisplayName } from '../chains/utils';
 import { DeploymentStatusIcon } from './DeploymentStatusIcon';
 import { DeploymentContext } from './types';
+import { sortWarpCoreConfig } from './utils';
 
 export function DeploymentsDetailsModal({
   isOpen,
@@ -23,6 +24,8 @@ export function DeploymentsDetailsModal({
   const multiProvider = useMultiProvider();
   const chainNames = chains.map((c) => getChainDisplayName(multiProvider, c)).join(', ');
 
+  const warpCoreResult = sortWarpCoreConfig(result?.result);
+
   return (
     <Modal isOpen={isOpen} close={onClose} panelClassname="p-4 md:p-5 max-w-[30rem] space-y-3">
       <div className="flex items-center justify-between">
@@ -37,7 +40,7 @@ export function DeploymentsDetailsModal({
         <DeploymentProperty name="Chains" value={chainNames} />
       </div>
       <CollapsibleData data={config.config} label="Deployment Config" />
-      {result && <CollapsibleData data={result.result} label="Deployment Result" />}
+      {result && <CollapsibleData data={warpCoreResult} label="Deployment Result" />}
     </Modal>
   );
 }
