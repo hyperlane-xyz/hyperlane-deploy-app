@@ -6,5 +6,7 @@ export function sendJsonResponse<T>(
   statusCode: number,
   body?: ApiResponseBody<T>,
 ) {
-  return res.status(statusCode).json(body as ApiResponseBody<T>);
+  if (body) return res.status(statusCode).json(body);
+
+  return res.status(statusCode).end();
 }
