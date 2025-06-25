@@ -1,5 +1,4 @@
-import { WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
-import { objKeys } from '@hyperlane-xyz/utils';
+import { WarpCoreConfig } from '@hyperlane-xyz/sdk';
 import { tryClipboardSet } from '@hyperlane-xyz/widgets';
 import { toast } from 'react-toastify';
 import { stringify } from 'yaml';
@@ -26,18 +25,13 @@ export function downloadYamlFile(config: unknown | undefined, filename: string) 
   URL.revokeObjectURL(url);
 }
 
-export function getDeployConfigFilename(config: WarpRouteDeployConfig) {
-  if (!config) return 'deploy.yaml';
-  const chains = objKeys(config).sort();
+export function getConfigsFilename(warpRouteId: string) {
+  const [_, label] = warpRouteId.split('/');
 
-  return `${chains.join('-')}-deploy.yaml`;
-}
-
-export function getWarpConfigFilename(config: WarpCoreConfig) {
-  if (!config) return 'config.yaml';
-
-  const chains = config.tokens.map((token) => token.chainName).sort();
-  return `${chains.join('-')}-config.yaml`;
+  return {
+    deployConfigFilename: `${label}-deploy.yaml`,
+    warpConfigFilename: `${label}-config.yaml`,
+  };
 }
 
 export function sortWarpCoreConfig(warpCoreConfig?: WarpCoreConfig): WarpCoreConfig | undefined {

@@ -7,7 +7,7 @@ import { CreatePrBody, CreatePrResponse, GithubIdentity } from '../../types/crea
 import { normalizeEmptyStrings } from '../../utils/string';
 import { useLatestDeployment } from './hooks';
 import { DeploymentType } from './types';
-import { getDeployConfigFilename, getWarpConfigFilename } from './utils';
+import { getConfigsFilename } from './utils';
 import { isSyntheticTokenType } from './warp/utils';
 
 const warpRoutesPath = 'deployments/warp_routes';
@@ -43,15 +43,14 @@ async function createWarpRoutePR(
   warpConfig: WarpCoreConfig,
   githubInformation: GithubIdentity,
 ): Promise<CreatePrResponse> {
-  const deployConfigFilename = getDeployConfigFilename(deployConfig);
-  const warpConfigFilename = getWarpConfigFilename(warpConfig);
   const firstNonSynthetic = Object.values(deployConfig).find((c) => !isSyntheticTokenType(c.type));
 
   if (!firstNonSynthetic || !firstNonSynthetic.symbol)
     throw new Error('Token types cannot all be synthetic');
 
   const symbol = firstNonSynthetic.symbol;
-  const warpRouteId = BaseRegistry.warpRouteConfigToId(warpConfig, { symbol });
+  const warpRouteId = BaseRegistry.warpDeployConfigToId(deployConfig, { symbol });
+  const { deployConfigFilename, warpConfigFilename } = getConfigsFilename(warpRouteId);
 
   const yamlDeployConfig = stringify(deployConfig, { sortMapEntries: true });
   const yamlWarpConfig = stringify(warpConfig, { sortMapEntries: true });

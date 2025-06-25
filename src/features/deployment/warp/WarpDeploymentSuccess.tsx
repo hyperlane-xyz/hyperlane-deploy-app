@@ -1,9 +1,10 @@
+import { BaseRegistry } from '@hyperlane-xyz/registry';
 import { TOKEN_COLLATERALIZED_STANDARDS } from '@hyperlane-xyz/sdk';
 import { shortenAddress } from '@hyperlane-xyz/utils';
 import { CopyIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import Image from 'next/image';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { RestartButton } from '../../../components/buttons/RestartButton';
 import { A } from '../../../components/text/A';
 import { H1, H2 } from '../../../components/text/Headers';
@@ -16,14 +17,9 @@ import { CreateRegistryPrModal } from '../CreateRegistryPrModal';
 import { useCreateWarpRoutePR } from '../github';
 import { useDeploymentHistory, useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentType } from '../types';
-import {
-  downloadYamlFile,
-  getDeployConfigFilename,
-  getWarpConfigFilename,
-  sortWarpCoreConfig,
-  tryCopyConfig,
-} from '../utils';
+import { downloadYamlFile, getConfigsFilename, sortWarpCoreConfig, tryCopyConfig } from '../utils';
 import { CoinGeckoFormValues } from './types';
+import { isSyntheticTokenType } from './utils';
 
 export function WarpDeploymentSuccess() {
   const { deploymentConfig } = useWarpDeploymentConfig();
@@ -40,28 +36,43 @@ export function WarpDeploymentSuccess() {
   const firstOwnerDisplay = firstOwner ? ` (${shortenAddress(firstOwner)})` : '';
 
   const deploymentContext = useLatestDeployment();
+
+  const warpRouteId = useMemo(() => {
+    if (!deploymentContext.config?.config || deploymentContext.config.type !== DeploymentType.Warp)
+      return undefined;
+    const deployConfig = deploymentContext.config.config;
+    const firstNonSynthetic = Object.values(deployConfig).find(
+      (c) => !isSyntheticTokenType(c.type),
+    );
+
+    if (!firstNonSynthetic || !firstNonSynthetic.symbol) return undefined;
+    const symbol = firstNonSynthetic.symbol;
+
+    return BaseRegistry.warpDeployConfigToId(deployConfig, { symbol });
+  }, [deploymentContext]);
+
   const onClickCopyConfig = () =>
     tryCopyConfig(sortWarpCoreConfig(deploymentContext?.result?.result));
   const onClickCopyDeployConfig = () => tryCopyConfig(deploymentContext?.config.config);
 
   const downloadDeployConfig = () => {
-    if (!deploymentContext?.config.config || deploymentContext.config.type !== DeploymentType.Warp)
-      return;
+    if (!warpRouteId) return;
 
     const deployConfigResult = deploymentContext.config.config;
-    const filename = getDeployConfigFilename(deployConfigResult);
-    downloadYamlFile(deployConfigResult, filename);
+    const { deployConfigFilename } = getConfigsFilename(warpRouteId);
+    downloadYamlFile(deployConfigResult, deployConfigFilename);
   };
 
   const downloadWarpConfig = () => {
+    if (!warpRouteId) return;
     if (!deploymentContext?.result?.result || deploymentContext.result.type !== DeploymentType.Warp)
       return;
 
     const warpConfigResult = sortWarpCoreConfig(deploymentContext.result.result);
     if (!warpConfigResult) return;
 
-    const filename = getWarpConfigFilename(warpConfigResult);
-    downloadYamlFile(warpConfigResult, filename);
+    const { warpConfigFilename } = getConfigsFilename(warpRouteId);
+    downloadYamlFile(warpConfigResult, warpConfigFilename);
   };
 
   const onCancelCoinGeckoId = () => {
