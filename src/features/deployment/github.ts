@@ -39,7 +39,7 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
       const prBody = getPrCreationBody(config.config, result.result, githubInformation);
       const timestamp = `timestamp: ${new Date().toISOString()}`;
       const message = `Verify PR creation for: ${prBody.warpRouteId} ${timestamp}`;
-      const res = await signMessageAsync({
+      const signature = await signMessageAsync({
         message,
       });
 
@@ -48,7 +48,7 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
         signatureVerification: {
           address: account.addresses[0].address,
           message,
-          signature: res,
+          signature,
         },
       });
     },
