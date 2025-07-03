@@ -217,7 +217,7 @@ function writeChangeset(description: string): DeployFile {
 ${description.trim()}
 `;
 
-  return { path: `.changset/${filename}`, content };
+  return { path: `.changeset/${filename}`, content };
 }
 
 function getBranchName(
