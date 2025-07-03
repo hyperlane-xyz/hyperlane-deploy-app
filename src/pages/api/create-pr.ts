@@ -10,6 +10,7 @@ import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { isHex, verifyMessage } from 'viem';
 import { serverConfig } from '../../consts/config.server';
+import { sortWarpCoreConfig } from '../../features/deployment/utils';
 import { getOctokitClient } from '../../libs/github';
 import { ApiError, ApiSuccess } from '../../types/api';
 import {
@@ -21,6 +22,7 @@ import {
   VerifyPrSignatureSchema,
 } from '../../types/createPr';
 import { sendJsonResponse } from '../../utils/api';
+import { sortObjByKeys } from '../../utils/object';
 import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
 
 export default async function handler(
@@ -223,8 +225,11 @@ function getBranchName(
   deployConfig: WarpRouteDeployConfig,
   warpConfig: WarpCoreConfig,
 ): ApiError | ApiSuccess<string> {
-  const deployConfigBuffer = toUtf8Bytes(JSON.stringify(deployConfig));
-  const warpConfigBuffer = toUtf8Bytes(JSON.stringify(warpConfig));
+  const sortedDeployConfig = sortObjByKeys(deployConfig);
+  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig));
+
+  const deployConfigBuffer = toUtf8Bytes(JSON.stringify(sortedDeployConfig));
+  const warpConfigBuffer = toUtf8Bytes(JSON.stringify(sortedWarpCoreConfig));
 
   try {
     const requestBodyHash = solidityKeccak256(

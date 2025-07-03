@@ -16,7 +16,7 @@ import { normalizeEmptyStrings } from '../../utils/string';
 import { useMultiProvider } from '../chains/hooks';
 import { useLatestDeployment } from './hooks';
 import { DeploymentType } from './types';
-import { getConfigsFilename } from './utils';
+import { getConfigsFilename, sortWarpCoreConfig } from './utils';
 import { isSyntheticTokenType } from './warp/utils';
 
 const warpRoutesPath = 'deployments/warp_routes';
@@ -82,7 +82,7 @@ function getPrCreationBody(
   const { deployConfigFilename, warpConfigFilename } = getConfigsFilename(warpRouteId);
 
   const yamlDeployConfig = stringify(deployConfig, { sortMapEntries: true });
-  const yamlWarpConfig = stringify(warpConfig, { sortMapEntries: true });
+  const yamlWarpConfig = stringify(sortWarpCoreConfig(warpConfig), { sortMapEntries: true });
 
   const basePath = `${warpRoutesPath}/${symbol}`;
   const requestBody: CreatePrBody = {
