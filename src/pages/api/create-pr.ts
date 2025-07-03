@@ -198,8 +198,8 @@ async function validateRequestSignature(
   }
 
   const currentTimestamp = new Date();
-  const diffInMinutes = (currentTimestamp.getTime() - timestamp.getTime()) / 1000 / 60;
-  if (diffInMinutes > MAX_TIMESTAMP_DURATION) return { error: 'Expired signature' };
+  const diffInMs = currentTimestamp.getTime() - timestamp.getTime();
+  if (diffInMs > MAX_TIMESTAMP_DURATION) return { error: 'Expired signature' };
 
   return { success: true, data: { address, message, signature } };
 }
