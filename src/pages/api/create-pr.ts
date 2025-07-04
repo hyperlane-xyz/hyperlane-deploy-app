@@ -180,12 +180,16 @@ async function validateRequestSignature(
   if (!isHex(address)) return { error: 'Address is not a hex string' };
   if (!isHex(signature)) return { error: 'Signature is a not a hex string' };
 
-  const isValidSignature = await verifyMessage({
-    address,
-    message,
-    signature,
-  });
-  if (!isValidSignature) return { error: 'Invalid signature' };
+  try {
+    const isValidSignature = await verifyMessage({
+      address,
+      message,
+      signature,
+    });
+    if (!isValidSignature) return { error: 'Invalid signature' };
+  } catch {
+    return { error: 'Invalid signature' };
+  }
 
   // validate that signature is not older than `MAX_TIMESTAMP_DURATION`
   const splitMessage = message.split('timestamp:');

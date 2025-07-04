@@ -1,9 +1,12 @@
 import { BaseRegistry } from '@hyperlane-xyz/registry';
-import { WarpCoreConfig, WarpRouteDeployConfig } from '@hyperlane-xyz/sdk';
+import {
+  MultiProtocolProvider,
+  ProviderType,
+  WarpCoreConfig,
+  WarpRouteDeployConfig,
+} from '@hyperlane-xyz/sdk';
 import { assert, ProtocolType } from '@hyperlane-xyz/utils';
-import { useAccounts } from '@hyperlane-xyz/widgets';
 import { useMutation } from '@tanstack/react-query';
-import { useSignMessage } from 'wagmi';
 import { stringify } from 'yaml';
 import { useToastError } from '../../components/toast/useToastError';
 import {
@@ -14,6 +17,8 @@ import {
 } from '../../types/createPr';
 import { normalizeEmptyStrings } from '../../utils/string';
 import { useMultiProvider } from '../chains/hooks';
+import { TypedWallet } from '../deployerWallet/types';
+import { useDeployerWallets } from '../deployerWallet/wallets';
 import { useLatestDeployment } from './hooks';
 import { DeploymentType } from './types';
 import { getConfigsFilename, sortWarpCoreConfig } from './utils';
@@ -23,9 +28,8 @@ const warpRoutesPath = 'deployments/warp_routes';
 
 export function useCreateWarpRoutePR(onSuccess: () => void) {
   const { config, result } = useLatestDeployment();
-  const { signMessageAsync } = useSignMessage();
   const multiProvider = useMultiProvider();
-  const { accounts } = useAccounts(multiProvider);
+  const { wallets } = useDeployerWallets();
 
   const { isPending, mutate, mutateAsync, error, data } = useMutation({
     mutationKey: ['createWarpRoutePr', config, result],
@@ -33,20 +37,18 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
       if (!config.config || config.type !== DeploymentType.Warp) return Promise.resolve(null);
       if (!result?.result || result.type !== DeploymentType.Warp) return Promise.resolve(null);
 
-      const account = accounts[ProtocolType.Ethereum];
-      assert(account.addresses.length, 'No wallet connected');
+      const deployer = wallets[ProtocolType.Ethereum];
+      assert(deployer, 'Deployer wallet not found');
 
       const prBody = getPrCreationBody(config.config, result.result, githubInformation);
       const timestamp = `timestamp: ${new Date().toISOString()}`;
       const message = `Verify PR creation for: ${prBody.warpRouteId} ${timestamp}`;
-      const signature = await signMessageAsync({
-        message,
-      });
+      const signature = await createSignatureFromWallet(deployer, message, multiProvider);
 
       return createWarpRoutePR({
         prBody,
         signatureVerification: {
-          address: account.addresses[0].address,
+          address: signature,
           message,
           signature,
         },
@@ -108,4 +110,20 @@ async function createWarpRoutePR(requestBody: CreatePrRequestBody): Promise<Crea
   if (!res.ok) throw new Error(data.error || 'Unknown error');
 
   return data;
+}
+
+// TODO multi-protocol support
+export async function createSignatureFromWallet(
+  typedWallet: TypedWallet,
+  message: string,
+  multiProvider: MultiProtocolProvider,
+): Promise<string> {
+  if (typedWallet.type === ProviderType.EthersV5) {
+    // any chain will do but we are using mainnet for ease
+    const provider = multiProvider.getEthersV5Provider('ethereum');
+    const signature = await typedWallet.wallet.connect(provider).signMessage(message);
+    return signature;
+  } else {
+    throw new Error(`Unsupported provider type for sending txs: ${typedWallet.type}`);
+  }
 }

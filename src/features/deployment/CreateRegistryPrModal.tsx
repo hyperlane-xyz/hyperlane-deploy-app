@@ -39,13 +39,6 @@ export function CreateRegistryPrModal({
         </A>
         ? Once your PR is merged, your artifacts will become available for the community to use!
       </p>
-      <p className={styles.text}>
-        <strong>
-          You will be required to sign a message using your wallet to verify your signature. This
-          won&#39;t send any transactions on chain and it is only used to verify the validity of the
-          deployed warp route.
-        </strong>
-      </p>
 
       <p className={styles.text}>
         Optionally, you can include your Github username and organization!
