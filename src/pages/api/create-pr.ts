@@ -29,6 +29,8 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CreatePrResponse | ApiError>,
 ) {
+  if (req.method !== 'POST') return sendJsonResponse(res, 405, { error: 'Method not allowed' });
+
   const {
     githubBaseBranch,
     githubForkOwner,
@@ -230,7 +232,7 @@ function getBranchName(
   warpConfig: WarpCoreConfig,
 ): ApiError | ApiSuccess<string> {
   const sortedDeployConfig = sortObjByKeys(deployConfig);
-  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig));
+  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig)!);
 
   const deployConfigBuffer = toUtf8Bytes(JSON.stringify(sortedDeployConfig));
   const warpConfigBuffer = toUtf8Bytes(JSON.stringify(sortedWarpCoreConfig));

@@ -1,6 +1,6 @@
 import { isObject } from '@hyperlane-xyz/utils';
 
-export function sortObjByKeys(obj: any) {
+export function sortObjByKeys<T extends Record<string, any>>(obj: T): T {
   if (!isObject(obj)) return obj;
 
   return Object.keys(obj)
@@ -8,5 +8,5 @@ export function sortObjByKeys(obj: any) {
     .reduce((acc, key) => {
       acc[key] = obj[key];
       return acc;
-    }, {});
+    }, {}) as T;
 }
