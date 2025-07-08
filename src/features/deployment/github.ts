@@ -34,8 +34,10 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
   const { isPending, mutate, mutateAsync, error, data } = useMutation({
     mutationKey: ['createWarpRoutePr', config, result],
     mutationFn: async (githubInformation: GithubIdentity) => {
-      if (!config.config || config.type !== DeploymentType.Warp) return Promise.resolve(null);
-      if (!result?.result || result.type !== DeploymentType.Warp) return Promise.resolve(null);
+      if (!config.config || config.type !== DeploymentType.Warp)
+        throw new Error('Deployment config not found');
+      if (!result?.result || result.type !== DeploymentType.Warp)
+        throw new Error('Deployment result not found');
 
       const deployer = wallets[ProtocolType.Ethereum];
       assert(deployer, 'Deployer wallet not found');

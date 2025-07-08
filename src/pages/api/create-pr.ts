@@ -6,10 +6,9 @@ import {
 } from '@hyperlane-xyz/sdk';
 import { isValidAddressEvm } from '@hyperlane-xyz/utils';
 import { Octokit } from '@octokit/rest';
-import { solidityKeccak256, toUtf8Bytes } from 'ethers/lib/utils';
 import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { isHex, verifyMessage } from 'viem';
+import { encodePacked, isHex, keccak256, toBytes, toHex, verifyMessage } from 'viem';
 import { serverConfig } from '../../consts/config.server';
 import { sortWarpCoreConfig } from '../../features/deployment/utils';
 import { getOctokitClient } from '../../libs/github';
@@ -237,13 +236,15 @@ function getBranchName(
   const sortedDeployConfig = sortObjByKeys(deployConfig);
   const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig)!);
 
-  const deployConfigBuffer = toUtf8Bytes(JSON.stringify(sortedDeployConfig));
-  const warpConfigBuffer = toUtf8Bytes(JSON.stringify(sortedWarpCoreConfig));
+  const deployConfigBuffer = toBytes(JSON.stringify(sortedDeployConfig));
+  const warpConfigBuffer = toBytes(JSON.stringify(sortedWarpCoreConfig));
 
   try {
-    const requestBodyHash = solidityKeccak256(
-      ['string', 'bytes', 'bytes'],
-      [warpRouteId, deployConfigBuffer, warpConfigBuffer],
+    const requestBodyHash = keccak256(
+      encodePacked(
+        ['string', 'bytes', 'bytes'],
+        [warpRouteId, toHex(deployConfigBuffer), toHex(warpConfigBuffer)],
+      ),
     );
     return { success: true, data: `${warpRouteId}-${requestBodyHash}` };
   } catch {
