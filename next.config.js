@@ -86,7 +86,6 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
-  output: 'standalone',
 };
 
 const sentryOptions = {

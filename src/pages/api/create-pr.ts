@@ -4,7 +4,6 @@ import {
   WarpRouteDeployConfig,
   WarpRouteDeployConfigSchema,
 } from '@hyperlane-xyz/sdk';
-import { isValidAddressEvm } from '@hyperlane-xyz/utils';
 import { Octokit } from '@octokit/rest';
 import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -179,10 +178,8 @@ async function validateRequestSignature(
 
   const { address, message, signature } = parsedSignatureBody.data;
 
-  if (!isHex(address) || !isValidAddressEvm(address))
-    return { error: 'Address is not a valid EVM hex string' };
-  if (!isHex(signature) || !isValidAddressEvm(address))
-    return { error: 'Signature is a not a valid EVM hex string' };
+  if (!isHex(address)) return { error: 'Address is not a valid EVM hex string' };
+  if (!isHex(signature)) return { error: 'Signature is a not a valid EVM hex string' };
 
   try {
     const isValidSignature = await verifyMessage({
