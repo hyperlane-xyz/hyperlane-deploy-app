@@ -44,3 +44,16 @@ export const CreatePrBodySchema = z
 export type CreatePrBody = z.infer<typeof CreatePrBodySchema>;
 
 export type CreatePrResponse = ApiResponseBody<CreatePrData>;
+
+export const VerifyPrSignatureSchema = z.object({
+  message: z.string().min(1).describe('Message to be signed'),
+  address: z.string().min(1).describe('Owner of the signed message'),
+  signature: z.string().min(1).describe('The signed message'),
+});
+
+export type VerifyPrSignature = z.infer<typeof VerifyPrSignatureSchema>;
+
+export type CreatePrRequestBody = {
+  prBody: CreatePrBody;
+  signatureVerification: VerifyPrSignature;
+};

@@ -1,7 +1,17 @@
-import { WarpCoreConfigSchema, WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
+import {
+  WarpCoreConfig,
+  WarpCoreConfigSchema,
+  WarpRouteDeployConfig,
+  WarpRouteDeployConfigSchema,
+} from '@hyperlane-xyz/sdk';
+import { isValidAddressEvm } from '@hyperlane-xyz/utils';
+import { Octokit } from '@octokit/rest';
+import { solidityKeccak256, toUtf8Bytes } from 'ethers/lib/utils';
 import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { isHex, verifyMessage } from 'viem';
 import { serverConfig } from '../../consts/config.server';
+import { sortWarpCoreConfig } from '../../features/deployment/utils';
 import { getOctokitClient } from '../../libs/github';
 import { ApiError, ApiSuccess } from '../../types/api';
 import {
@@ -9,14 +19,19 @@ import {
   CreatePrBodySchema,
   CreatePrResponse,
   DeployFile,
+  VerifyPrSignature,
+  VerifyPrSignatureSchema,
 } from '../../types/createPr';
 import { sendJsonResponse } from '../../utils/api';
+import { sortObjByKeys } from '../../utils/object';
 import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CreatePrResponse | ApiError>,
 ) {
+  if (req.method !== 'POST') return sendJsonResponse(res, 405, { error: 'Method not allowed' });
+
   const {
     githubBaseBranch,
     githubForkOwner,
@@ -34,12 +49,33 @@ export default async function handler(
     });
   }
 
-  const requestBody = validateRequestBody(req.body);
+  const { prBody, signatureVerification } = req.body;
+
+  const requestBody = validateRequestBody(prBody);
   if (!requestBody.success) return sendJsonResponse(res, 400, { error: requestBody.error });
 
+  const signatureVerificationResponse = await validateRequestSignature(signatureVerification);
+  if (!signatureVerificationResponse.success)
+    return sendJsonResponse(res, 400, { error: signatureVerificationResponse.error });
+
   const {
-    data: { deployConfig, warpConfig, warpRouteId, organization, username },
-  } = requestBody;
+    deployConfig,
+    warpConfig,
+    warpRouteId,
+    organization,
+    username,
+    deployConfigResult,
+    warpConfigResult,
+  } = requestBody.data;
+
+  const branch = getBranchName(warpRouteId, deployConfigResult, warpConfigResult);
+  if (!branch.success) return sendJsonResponse(res, 400, { error: branch.error });
+
+  const branchName = branch.data;
+  const validBranch = await isValidBranchName(octokit, githubForkOwner, githubRepoName, branchName);
+
+  if (!validBranch)
+    return sendJsonResponse(res, 400, { error: 'A PR already exists with these config!' });
 
   try {
     // Get latest SHA of base branch in fork
@@ -50,13 +86,12 @@ export default async function handler(
     });
 
     const latestCommitSha = refData.object.sha;
-    const newBranch = `${warpRouteId}-config-${Date.now()}`;
 
     // Create new branch
     await octokit.git.createRef({
       owner: githubForkOwner,
       repo: githubRepoName,
-      ref: `refs/heads/${newBranch}`,
+      ref: `refs/heads/${branchName}`,
       sha: latestCommitSha,
     });
 
@@ -70,7 +105,7 @@ export default async function handler(
         path: file.path,
         message: `feat: add ${file.path}`,
         content: Buffer.from(file.content).toString('base64'),
-        branch: newBranch,
+        branch: branchName,
       });
     }
 
@@ -83,7 +118,7 @@ export default async function handler(
       owner: githubUpstreamOwner,
       repo: githubRepoName,
       title: `feat: add ${warpRouteId} warp route deploy artifacts`,
-      head: `${githubForkOwner}:${newBranch}`,
+      head: `${githubForkOwner}:${branchName}`,
       base: githubBaseBranch,
       body: `This PR was created from the deploy app to add ${warpRouteId} warp route deploy artifacts.${
         githubInfo ? `\n\nThis config was provided ${githubInfo}.` : ''
@@ -96,7 +131,13 @@ export default async function handler(
   }
 }
 
-export function validateRequestBody(body: unknown): ApiError | ApiSuccess<CreatePrBody> {
+export function validateRequestBody(
+  body: unknown,
+):
+  | ApiError
+  | ApiSuccess<
+      CreatePrBody & { deployConfigResult: WarpRouteDeployConfig; warpConfigResult: WarpCoreConfig }
+    > {
   if (!body) return { error: 'Missing request body' };
 
   const parsedBody = CreatePrBodySchema.safeParse(body);
@@ -121,8 +162,55 @@ export function validateRequestBody(body: unknown): ApiError | ApiSuccess<Create
       warpRouteId,
       organization,
       username,
+      deployConfigResult,
+      warpConfigResult,
     },
   };
+}
+
+const MAX_TIMESTAMP_DURATION = 2 * 60 * 1000; // 2 minutes
+
+async function validateRequestSignature(
+  signatureVerification: unknown,
+): Promise<ApiError | ApiSuccess<VerifyPrSignature>> {
+  if (!signatureVerification) return { error: 'Missing signatureVerification' };
+
+  const parsedSignatureBody = VerifyPrSignatureSchema.safeParse(signatureVerification);
+  if (!parsedSignatureBody.success) return { error: zodErrorToString(parsedSignatureBody.error) };
+
+  const { address, message, signature } = parsedSignatureBody.data;
+
+  if (!isHex(address) || !isValidAddressEvm(address))
+    return { error: 'Address is not a valid EVM hex string' };
+  if (!isHex(signature) || !isValidAddressEvm(address))
+    return { error: 'Signature is a not a valid EVM hex string' };
+
+  try {
+    const isValidSignature = await verifyMessage({
+      address,
+      message,
+      signature,
+    });
+    if (!isValidSignature) return { error: 'Invalid signature' };
+  } catch {
+    return { error: 'Invalid signature' };
+  }
+
+  // validate that signature is not older than `MAX_TIMESTAMP_DURATION`
+  const splitMessage = message.split('timestamp:');
+  if (splitMessage.length !== 2) return { error: 'Timestamp not found in message' };
+
+  const isoString = splitMessage[1].trim();
+  const timestamp = new Date(isoString);
+  if (isNaN(timestamp.getTime())) {
+    return { error: 'Invalid timestamp format' };
+  }
+
+  const currentTimestamp = new Date();
+  const diffInMs = currentTimestamp.getTime() - timestamp.getTime();
+  if (diffInMs > MAX_TIMESTAMP_DURATION) return { error: 'Expired signature' };
+
+  return { success: true, data: { address, message, signature } };
 }
 
 // adapted from https://github.com/changesets/changesets/blob/main/packages/write/src/index.ts
@@ -138,5 +226,51 @@ function writeChangeset(description: string): DeployFile {
 ${description.trim()}
 `;
 
-  return { path: `.changset/${filename}`, content };
+  return { path: `.changeset/${filename}`, content };
+}
+
+function getBranchName(
+  warpRouteId: string,
+  deployConfig: WarpRouteDeployConfig,
+  warpConfig: WarpCoreConfig,
+): ApiError | ApiSuccess<string> {
+  const sortedDeployConfig = sortObjByKeys(deployConfig);
+  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig)!);
+
+  const deployConfigBuffer = toUtf8Bytes(JSON.stringify(sortedDeployConfig));
+  const warpConfigBuffer = toUtf8Bytes(JSON.stringify(sortedWarpCoreConfig));
+
+  try {
+    const requestBodyHash = solidityKeccak256(
+      ['string', 'bytes', 'bytes'],
+      [warpRouteId, deployConfigBuffer, warpConfigBuffer],
+    );
+    return { success: true, data: `${warpRouteId}-${requestBodyHash}` };
+  } catch {
+    return { error: 'Failed to create branch name' };
+  }
+}
+
+async function isValidBranchName(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branchName: string,
+) {
+  try {
+    await octokit.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${branchName}`,
+    });
+
+    // If no error is thrown, the branch exists
+    return false;
+  } catch (error: any) {
+    // branch does not exist
+    if (error.status === 404) return true;
+
+    // Something else went wrong
+    throw new Error(`Failed to check branch existence: ${error.message}`);
+  }
 }
