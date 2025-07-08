@@ -48,7 +48,7 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
       return createWarpRoutePR({
         prBody,
         signatureVerification: {
-          address: signature,
+          address: deployer.address,
           message,
           signature,
         },

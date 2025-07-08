@@ -1,4 +1,5 @@
 import { WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import { assert } from '@hyperlane-xyz/utils';
 import { tryClipboardSet } from '@hyperlane-xyz/widgets';
 import { toast } from 'react-toastify';
 import { stringify } from 'yaml';
@@ -27,6 +28,8 @@ export function downloadYamlFile(config: unknown | undefined, filename: string) 
 
 export function getConfigsFilename(warpRouteId: string) {
   const [_, label] = warpRouteId.split('/');
+
+  assert(label, `Invalid warpRouteId format: ${warpRouteId}. Expected format: "prefix/label`);
 
   return {
     deployConfigFilename: `${label}-deploy.yaml`,
