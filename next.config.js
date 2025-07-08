@@ -86,12 +86,7 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
-  outputFileTracingExcludes: {
-    '/api/create-pr': [
-      './node_modules/@rainbow-me/rainbowkit/**/*',
-      './node_modules/@vanilla-extract/**/*',
-    ],
-  },
+  output: 'standalone',
 };
 
 const sentryOptions = {
