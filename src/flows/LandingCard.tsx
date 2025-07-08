@@ -40,7 +40,7 @@ export function LandingPage() {
         </a>
         <SolidButton
           color="accent"
-          onClick={() => setPage(CardPage.WarpSuccess)}
+          onClick={() => setPage(CardPage.WarpForm)}
           className="w-36 px-3 py-2"
         >
           Deploy
