@@ -3,6 +3,7 @@ import '@hyperlane-xyz/widgets/styles.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
 import type { AppProps } from 'next/app';
+import dynamic from 'next/dynamic';
 import { ToastContainer, Zoom } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ErrorBoundary } from '../components/errors/ErrorBoundary';
@@ -10,12 +11,15 @@ import { AppLayout } from '../components/layout/AppLayout';
 import { MAIN_FONT } from '../consts/app';
 import { ContextInitGate } from '../features/ContextInitGate';
 import { CosmosWalletContext } from '../features/wallet/context/CosmosWalletContext';
-import { EvmWalletContext } from '../features/wallet/context/EvmWalletContext';
 import { SolanaWalletContext } from '../features/wallet/context/SolanaWalletContext';
 import { StarknetWalletContext } from '../features/wallet/context/StarknetWalletContext';
 import '../styles/globals.css';
 import '../vendor/inpage-metamask';
 import '../vendor/polyfill';
+
+const EvmWalletContext = dynamic(() => import('../features/wallet/context/EvmWalletContext'), {
+  ssr: false,
+});
 
 const reactQueryClient = new QueryClient({
   defaultOptions: {

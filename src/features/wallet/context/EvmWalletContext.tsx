@@ -50,7 +50,7 @@ function initWagmi(multiProvider: MultiProtocolProvider) {
   return { wagmiConfig, chains };
 }
 
-export function EvmWalletContext({ children }: PropsWithChildren<unknown>) {
+export default function EvmWalletContext({ children }: PropsWithChildren<unknown>) {
   const multiProvider = useMultiProvider();
 
   const { wagmiConfig } = useMemo(() => initWagmi(multiProvider), [multiProvider]);
