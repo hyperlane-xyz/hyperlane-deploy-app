@@ -9,9 +9,7 @@ import { Octokit } from '@octokit/rest';
 import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { encodePacked, isHex, keccak256, toBytes, toHex, verifyMessage } from 'viem';
-import { serverConfig } from '../../consts/config.server';
 import { sortWarpCoreConfig } from '../../features/deployment/utils';
-import { getOctokitClient } from '../../libs/github';
 import { ApiError, ApiSuccess } from '../../types/api';
 import {
   CreatePrBody,
@@ -29,105 +27,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CreatePrResponse | ApiError>,
 ) {
-  if (req.method !== 'POST') return sendJsonResponse(res, 405, { error: 'Method not allowed' });
-
-  const {
-    githubBaseBranch,
-    githubForkOwner,
-    githubRepoName,
-    githubUpstreamOwner,
-    serverEnvironment,
-  } = serverConfig;
-  const octokit = getOctokitClient();
-  if (!octokit) {
-    return sendJsonResponse(res, 500, {
-      error:
-        serverEnvironment === 'development'
-          ? 'Missing Github configurations, check your environment variables'
-          : 'Internal Server Error',
-    });
-  }
-
-  const { prBody, signatureVerification } = req.body;
-
-  const requestBody = validateRequestBody(prBody);
-  if (!requestBody.success) return sendJsonResponse(res, 400, { error: requestBody.error });
-
-  const signatureVerificationResponse = await validateRequestSignature(signatureVerification);
-  if (!signatureVerificationResponse.success)
-    return sendJsonResponse(res, 400, { error: signatureVerificationResponse.error });
-
-  const {
-    deployConfig,
-    warpConfig,
-    warpRouteId,
-    organization,
-    username,
-    deployConfigResult,
-    warpConfigResult,
-  } = requestBody.data;
-
-  const branch = getBranchName(warpRouteId, deployConfigResult, warpConfigResult);
-  if (!branch.success) return sendJsonResponse(res, 400, { error: branch.error });
-
-  const branchName = branch.data;
-  const validBranch = await isValidBranchName(octokit, githubForkOwner, githubRepoName, branchName);
-
-  if (!validBranch)
-    return sendJsonResponse(res, 400, { error: 'A PR already exists with these config!' });
-
-  try {
-    // Get latest SHA of base branch in fork
-    const { data: refData } = await octokit.git.getRef({
-      owner: githubForkOwner,
-      repo: githubRepoName,
-      ref: `heads/${githubBaseBranch}`,
-    });
-
-    const latestCommitSha = refData.object.sha;
-
-    // Create new branch
-    await octokit.git.createRef({
-      owner: githubForkOwner,
-      repo: githubRepoName,
-      ref: `refs/heads/${branchName}`,
-      sha: latestCommitSha,
-    });
-
-    const changesetFile = writeChangeset(`Add ${warpRouteId} warp route deploy artifacts`);
-
-    // Upload files to the new branch
-    for (const file of [deployConfig, warpConfig, changesetFile]) {
-      await octokit.repos.createOrUpdateFileContents({
-        owner: githubForkOwner,
-        repo: githubRepoName,
-        path: file.path,
-        message: `feat: add ${file.path}`,
-        content: Buffer.from(file.content).toString('base64'),
-        branch: branchName,
-      });
-    }
-
-    const githubInfo = [username && `by ${username}`, organization && `from ${organization}`]
-      .filter(Boolean)
-      .join(' ');
-
-    // Create a PR from the fork branch to upstream main
-    const { data: pr } = await octokit.pulls.create({
-      owner: githubUpstreamOwner,
-      repo: githubRepoName,
-      title: `feat: add ${warpRouteId} warp route deploy artifacts`,
-      head: `${githubForkOwner}:${branchName}`,
-      base: githubBaseBranch,
-      body: `This PR was created from the deploy app to add ${warpRouteId} warp route deploy artifacts.${
-        githubInfo ? `\n\nThis config was provided ${githubInfo}.` : ''
-      }`,
-    });
-
-    return sendJsonResponse(res, 200, { data: { prUrl: pr.html_url }, success: true });
-  } catch (err: any) {
-    return sendJsonResponse(res, 500, { error: err.message });
-  }
+  return sendJsonResponse(res, 400, { error: 'testing error' });
 }
 
 export function validateRequestBody(
