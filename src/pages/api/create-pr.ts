@@ -4,19 +4,25 @@ import {
   WarpRouteDeployConfig,
   WarpRouteDeployConfigSchema,
 } from '@hyperlane-xyz/sdk';
+import { isValidAddressEvm } from '@hyperlane-xyz/utils';
+import { Octokit } from '@octokit/rest';
+import humanId from 'human-id';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { isHex, verifyMessage } from 'viem';
+import { encodePacked, isHex, keccak256, toBytes, toHex, verifyMessage } from 'viem';
 import { serverConfig } from '../../consts/config.server';
+import { sortWarpCoreConfig } from '../../features/deployment/utils';
 import { getOctokitClient } from '../../libs/github';
 import { ApiError, ApiSuccess } from '../../types/api';
 import {
   CreatePrBody,
   CreatePrBodySchema,
   CreatePrResponse,
+  DeployFile,
   VerifyPrSignature,
   VerifyPrSignatureSchema,
 } from '../../types/createPr';
 import { sendJsonResponse } from '../../utils/api';
+import { sortObjByKeys } from '../../utils/object';
 import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
 
 export default async function handler(
@@ -25,7 +31,7 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') return sendJsonResponse(res, 405, { error: 'Method not allowed' });
 
-  const { serverEnvironment } = serverConfig;
+  const { githubBaseBranch, githubForkOwner, githubRepoName, serverEnvironment } = serverConfig;
   const octokit = getOctokitClient();
   if (!octokit) {
     return sendJsonResponse(res, 500, {
@@ -45,7 +51,43 @@ export default async function handler(
   if (!signatureVerificationResponse.success)
     return sendJsonResponse(res, 400, { error: signatureVerificationResponse.error });
 
-  return sendJsonResponse(res, 400, { error: ' testing error' });
+  const { warpRouteId, deployConfigResult, warpConfigResult } = requestBody.data;
+
+  const branch = getBranchName(warpRouteId, deployConfigResult, warpConfigResult);
+  if (!branch.success) return sendJsonResponse(res, 400, { error: branch.error });
+
+  const branchName = branch.data;
+  const validBranch = await isValidBranchName(octokit, githubForkOwner, githubRepoName, branchName);
+
+  if (!validBranch)
+    return sendJsonResponse(res, 400, { error: 'A PR already exists with these config!' });
+
+  try {
+    // Get latest SHA of base branch in fork
+    const { data: refData } = await octokit.git.getRef({
+      owner: githubForkOwner,
+      repo: githubRepoName,
+      ref: `heads/${githubBaseBranch}`,
+    });
+
+    const latestCommitSha = refData.object.sha;
+
+    // Create new branch
+    await octokit.git.createRef({
+      owner: githubForkOwner,
+      repo: githubRepoName,
+      ref: `refs/heads/${branchName}`,
+      sha: latestCommitSha,
+    });
+
+    const changesetFile = writeChangeset(`Add ${warpRouteId} warp route deploy artifacts`);
+
+    return sendJsonResponse(res, 400, {
+      error: `branchName ${branchName} changeset: ${changesetFile.path}`,
+    });
+  } catch (err: any) {
+    return sendJsonResponse(res, 500, { error: err.message });
+  }
 }
 
 export function validateRequestBody(
@@ -97,8 +139,10 @@ async function validateRequestSignature(
 
   const { address, message, signature } = parsedSignatureBody.data;
 
-  if (!isHex(address)) return { error: 'Address is not a valid EVM hex string' };
-  if (!isHex(signature)) return { error: 'Signature is a not a valid EVM hex string' };
+  if (!isHex(address) || !isValidAddressEvm(address))
+    return { error: 'Address is not a valid EVM hex string' };
+  if (!isHex(signature) || !isValidAddressEvm(address))
+    return { error: 'Signature is a not a valid EVM hex string' };
 
   try {
     const isValidSignature = await verifyMessage({
@@ -126,4 +170,68 @@ async function validateRequestSignature(
   if (diffInMs > MAX_TIMESTAMP_DURATION) return { error: 'Expired signature' };
 
   return { success: true, data: { address, message, signature } };
+}
+
+// adapted from https://github.com/changesets/changesets/blob/main/packages/write/src/index.ts
+// so that it could be used in the deploy app
+function writeChangeset(description: string): DeployFile {
+  const id = humanId({ separator: '-', capitalize: false });
+  const filename = `${id}.md`;
+
+  const content = `---
+'@hyperlane-xyz/registry': minor
+---
+
+${description.trim()}
+`;
+
+  return { path: `.changeset/${filename}`, content };
+}
+
+function getBranchName(
+  warpRouteId: string,
+  deployConfig: WarpRouteDeployConfig,
+  warpConfig: WarpCoreConfig,
+): ApiError | ApiSuccess<string> {
+  const sortedDeployConfig = sortObjByKeys(deployConfig);
+  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig)!);
+
+  const deployConfigBuffer = toBytes(JSON.stringify(sortedDeployConfig));
+  const warpConfigBuffer = toBytes(JSON.stringify(sortedWarpCoreConfig));
+
+  try {
+    const requestBodyHash = keccak256(
+      encodePacked(
+        ['string', 'bytes', 'bytes'],
+        [warpRouteId, toHex(deployConfigBuffer), toHex(warpConfigBuffer)],
+      ),
+    );
+    return { success: true, data: `${warpRouteId}-${requestBodyHash}` };
+  } catch {
+    return { error: 'Failed to create branch name' };
+  }
+}
+
+async function isValidBranchName(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  branchName: string,
+) {
+  try {
+    await octokit.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${branchName}`,
+    });
+
+    // If no error is thrown, the branch exists
+    return false;
+  } catch (error: any) {
+    // branch does not exist
+    if (error.status === 404) return true;
+
+    // Something else went wrong
+    throw new Error(`Failed to check branch existence: ${error.message}`);
+  }
 }
