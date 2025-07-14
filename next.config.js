@@ -84,11 +84,6 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_VERSION: version,
   },
-  modularizeImports: {
-    '@rainbow-me/rainbowkit': {
-      transform: '@rainbow-me/rainbowkit/{{member}}',
-    },
-  },
 
   reactStrictMode: true,
 };

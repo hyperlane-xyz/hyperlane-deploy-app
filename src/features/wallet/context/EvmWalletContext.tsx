@@ -1,7 +1,6 @@
 import { MultiProtocolProvider } from '@hyperlane-xyz/sdk';
 import { getWagmiChainConfigs } from '@hyperlane-xyz/widgets';
 import { RainbowKitProvider, connectorsForWallets, lightTheme } from '@rainbow-me/rainbowkit';
-import '@rainbow-me/rainbowkit/styles.css';
 import {
   argentWallet,
   coinbaseWallet,
