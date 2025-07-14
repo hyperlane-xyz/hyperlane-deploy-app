@@ -31,7 +31,13 @@ export default async function handler(
 ) {
   if (req.method !== 'POST') return sendJsonResponse(res, 405, { error: 'Method not allowed' });
 
-  const { githubBaseBranch, githubForkOwner, githubRepoName, serverEnvironment } = serverConfig;
+  const {
+    githubBaseBranch,
+    githubForkOwner,
+    githubRepoName,
+    githubUpstreamOwner,
+    serverEnvironment,
+  } = serverConfig;
   const octokit = getOctokitClient();
   if (!octokit) {
     return sendJsonResponse(res, 500, {
@@ -51,7 +57,15 @@ export default async function handler(
   if (!signatureVerificationResponse.success)
     return sendJsonResponse(res, 400, { error: signatureVerificationResponse.error });
 
-  const { warpRouteId, deployConfigResult, warpConfigResult } = requestBody.data;
+  const {
+    deployConfig,
+    warpConfig,
+    warpRouteId,
+    organization,
+    username,
+    deployConfigResult,
+    warpConfigResult,
+  } = requestBody.data;
 
   const branch = getBranchName(warpRouteId, deployConfigResult, warpConfigResult);
   if (!branch.success) return sendJsonResponse(res, 400, { error: branch.error });
@@ -82,9 +96,35 @@ export default async function handler(
 
     const changesetFile = writeChangeset(`Add ${warpRouteId} warp route deploy artifacts`);
 
-    return sendJsonResponse(res, 400, {
-      error: `branchName ${branchName} changeset: ${changesetFile.path}`,
+    // Upload files to the new branch
+    for (const file of [deployConfig, warpConfig, changesetFile]) {
+      await octokit.repos.createOrUpdateFileContents({
+        owner: githubForkOwner,
+        repo: githubRepoName,
+        path: file.path,
+        message: `feat: add ${file.path}`,
+        content: Buffer.from(file.content).toString('base64'),
+        branch: branchName,
+      });
+    }
+
+    const githubInfo = [username && `by ${username}`, organization && `from ${organization}`]
+      .filter(Boolean)
+      .join(' ');
+
+    // Create a PR from the fork branch to upstream main
+    const { data: pr } = await octokit.pulls.create({
+      owner: githubUpstreamOwner,
+      repo: githubRepoName,
+      title: `feat: add ${warpRouteId} warp route deploy artifacts`,
+      head: `${githubForkOwner}:${branchName}`,
+      base: githubBaseBranch,
+      body: `This PR was created from the deploy app to add ${warpRouteId} warp route deploy artifacts.${
+        githubInfo ? `\n\nThis config was provided ${githubInfo}.` : ''
+      }`,
     });
+
+    return sendJsonResponse(res, 200, { data: { prUrl: pr.html_url }, success: true });
   } catch (err: any) {
     return sendJsonResponse(res, 500, { error: err.message });
   }
