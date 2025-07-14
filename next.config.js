@@ -86,6 +86,17 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
+
+  experimental: {
+    optimizePackageImports: [
+      '@hyperlane-xyz/registry',
+      '@hyperlane-xyz/sdk',
+      '@hyperlane-xyz/utils',
+      '@hyperlane-xyz/widgets',
+      '@rainbow-me/rainbowkit',
+      '@solana/spl-token',
+    ],
+  },
 };
 
 const sentryOptions = {
