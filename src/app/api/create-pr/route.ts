@@ -6,30 +6,25 @@ import {
 } from '@hyperlane-xyz/sdk';
 import { Octokit } from '@octokit/rest';
 import humanId from 'human-id';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest } from 'next/server';
 import { encodePacked, isHex, keccak256, toBytes, toHex, verifyMessage } from 'viem';
-import { serverConfig } from '../../consts/config.server';
-import { sortWarpCoreConfig } from '../../features/deployment/utils';
-import { getOctokitClient } from '../../libs/github';
-import { ApiError, ApiSuccess } from '../../types/api';
+import { serverConfig } from '../../../consts/config.server';
+import { sortWarpCoreConfig } from '../../../features/deployment/utils';
+import { getOctokitClient } from '../../../libs/github';
+import { ApiError, ApiSuccess } from '../../../types/api';
 import {
   CreatePrBody,
   CreatePrBodySchema,
-  CreatePrResponse,
   DeployFile,
   VerifyPrSignature,
   VerifyPrSignatureSchema,
-} from '../../types/createPr';
-import { sendJsonResponse } from '../../utils/api';
-import { sortObjByKeys } from '../../utils/object';
-import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
+} from '../../../types/createPr';
+import { sendJsonResponse } from '../../../utils/api';
+import { sortObjByKeys } from '../../../utils/object';
+import { validateStringToZodSchema, zodErrorToString } from '../../../utils/zod';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<CreatePrResponse | ApiError>,
-) {
-  if (req.method !== 'POST') return sendJsonResponse(res, 405, { error: 'Method not allowed' });
-
+export async function POST(req: NextRequest) {
+  const body = await req.json();
   const {
     githubBaseBranch,
     githubForkOwner,
@@ -39,7 +34,7 @@ export default async function handler(
   } = serverConfig;
   const octokit = getOctokitClient();
   if (!octokit) {
-    return sendJsonResponse(res, 500, {
+    return sendJsonResponse(500, {
       error:
         serverEnvironment === 'development'
           ? 'Missing Github configurations, check your environment variables'
@@ -47,14 +42,14 @@ export default async function handler(
     });
   }
 
-  const { prBody, signatureVerification } = req.body;
+  const { prBody, signatureVerification } = body;
 
   const requestBody = validateRequestBody(prBody);
-  if (!requestBody.success) return sendJsonResponse(res, 400, { error: requestBody.error });
+  if (!requestBody.success) return sendJsonResponse(400, { error: requestBody.error });
 
   const signatureVerificationResponse = await validateRequestSignature(signatureVerification);
   if (!signatureVerificationResponse.success)
-    return sendJsonResponse(res, 400, { error: signatureVerificationResponse.error });
+    return sendJsonResponse(400, { error: signatureVerificationResponse.error });
 
   const {
     deployConfig,
@@ -67,13 +62,13 @@ export default async function handler(
   } = requestBody.data;
 
   const branch = getBranchName(warpRouteId, deployConfigResult, warpConfigResult);
-  if (!branch.success) return sendJsonResponse(res, 400, { error: branch.error });
+  if (!branch.success) return sendJsonResponse(400, { error: branch.error });
 
   const branchName = branch.data;
   const validBranch = await isValidBranchName(octokit, githubForkOwner, githubRepoName, branchName);
 
   if (!validBranch)
-    return sendJsonResponse(res, 400, { error: 'A PR already exists with these config!' });
+    return sendJsonResponse(400, { error: 'A PR already exists with these config!' });
 
   try {
     // Get latest SHA of base branch in fork
@@ -123,9 +118,9 @@ export default async function handler(
       }`,
     });
 
-    return sendJsonResponse(res, 200, { data: { prUrl: pr.html_url }, success: true });
+    return sendJsonResponse(200, { data: { prUrl: pr.html_url }, success: true });
   } catch (err: any) {
-    return sendJsonResponse(res, 500, { error: err.message });
+    return sendJsonResponse(500, { error: err.message });
   }
 }
 
