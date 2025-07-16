@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export function validateRequestBody(
+function validateRequestBody(
   body: unknown,
 ):
   | ApiError

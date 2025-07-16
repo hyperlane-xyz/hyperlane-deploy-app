@@ -101,7 +101,7 @@ const nextConfig = {
 
 const sentryOptions = {
   org: 'hyperlane',
-  project: 'warp-ui',
+  project: 'deploy-app',
   authToken: process.env.SENTRY_AUTH_TOKEN,
   hideSourceMaps: true,
   tunnelRoute: '/monitoring-tunnel',
