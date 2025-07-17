@@ -11,9 +11,9 @@ import { stringify } from 'yaml';
 import { useToastError } from '../../components/toast/useToastError';
 import {
   CreatePrBody,
+  CreatePrForm,
   CreatePrRequestBody,
   CreatePrResponse,
-  GithubIdentity,
 } from '../../types/createPr';
 import { normalizeEmptyStrings } from '../../utils/string';
 import { useMultiProvider } from '../chains/hooks';
@@ -33,7 +33,7 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
 
   const { isPending, mutate, mutateAsync, error, data } = useMutation({
     mutationKey: ['createWarpRoutePr', config, result],
-    mutationFn: async (githubInformation: GithubIdentity) => {
+    mutationFn: async (prInformation: CreatePrForm) => {
       if (!config.config || config.type !== DeploymentType.Warp)
         throw new Error('Deployment config not found');
       if (!result?.result || result.type !== DeploymentType.Warp)
@@ -42,7 +42,7 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
       const deployer = wallets[ProtocolType.Ethereum];
       assert(deployer, 'Deployer wallet not found');
 
-      const prBody = getPrCreationBody(config.config, result.result, githubInformation);
+      const prBody = getPrCreationBody(config.config, result.result, prInformation);
       const timestamp = `timestamp: ${new Date().toISOString()}`;
       const message = `Verify PR creation for: ${prBody.warpRouteId} ${timestamp}`;
       const signature = await createSignatureFromWallet(deployer, message, multiProvider);
@@ -74,9 +74,10 @@ export function useCreateWarpRoutePR(onSuccess: () => void) {
 function getPrCreationBody(
   deployConfig: WarpRouteDeployConfig,
   warpConfig: WarpCoreConfig,
-  githubInformation: GithubIdentity,
+  prInformation: CreatePrForm,
 ) {
   const firstNonSynthetic = Object.values(deployConfig).find((c) => !isSyntheticTokenType(c.type));
+  const { organization, username, logo } = prInformation;
 
   if (!firstNonSynthetic || !firstNonSynthetic.symbol)
     throw new Error('Token types cannot all be synthetic');
@@ -90,22 +91,26 @@ function getPrCreationBody(
 
   const basePath = `${warpRoutesPath}/${symbol}`;
   const requestBody: CreatePrBody = {
-    ...normalizeEmptyStrings(githubInformation),
+    ...normalizeEmptyStrings({ organization, username }),
     deployConfig: { content: yamlDeployConfig, path: `${basePath}/${deployConfigFilename}` },
     warpConfig: { content: yamlWarpConfig, path: `${basePath}/${warpConfigFilename}` },
     warpRouteId,
+    logo,
   };
 
   return requestBody;
 }
 
 async function createWarpRoutePR(requestBody: CreatePrRequestBody): Promise<CreatePrResponse> {
+  const { logo, ...prBody } = requestBody.prBody;
+  const formData = new FormData();
+  formData.append('prBody', JSON.stringify(prBody));
+  formData.append('signatureVerification', JSON.stringify(requestBody.signatureVerification));
+  if (logo) formData.append('logo', logo);
+
   const res = await fetch('/api/create-pr', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...requestBody,
-    }),
+    body: formData,
   });
 
   const data = await res.json();

@@ -24,7 +24,12 @@ import { sortObjByKeys } from '../../../utils/object';
 import { validateStringToZodSchema, zodErrorToString } from '../../../utils/zod';
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const formData = await req.formData();
+
+  const prBody = JSON.parse(formData.get('prBody') as string);
+  const signatureVerification = JSON.parse(formData.get('signatureVerification') as string);
+  const logo = formData.get('logo') as File | null;
+
   const {
     githubBaseBranch,
     githubForkOwner,
@@ -42,7 +47,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { prBody, signatureVerification } = body;
+  // if (logo) {
+  //   if (!)
+  // }
 
   const requestBody = validateRequestBody(prBody);
   if (!requestBody.success) return sendJsonResponse(400, { error: requestBody.error });
@@ -51,17 +58,9 @@ export async function POST(req: NextRequest) {
   if (!signatureVerificationResponse.success)
     return sendJsonResponse(400, { error: signatureVerificationResponse.error });
 
-  const {
-    deployConfig,
-    warpConfig,
-    warpRouteId,
-    organization,
-    username,
-    deployConfigResult,
-    warpConfigResult,
-  } = requestBody.data;
+  const { deployConfig, warpConfig, warpRouteId, organization, username } = requestBody.data;
 
-  const branch = getBranchName(warpRouteId, deployConfigResult, warpConfigResult);
+  const branch = getBranchName(warpRouteId, deployConfig.content, warpConfig.content);
   if (!branch.success) return sendJsonResponse(400, { error: branch.error });
 
   const branchName = branch.data;
@@ -147,16 +146,25 @@ function validateRequestBody(
   const warpConfigResult = validateStringToZodSchema(warpConfig.content, WarpCoreConfigSchema);
   if (!warpConfigResult) return { error: 'Invalid warp config content' };
 
+  const sortedDeployConfig = sortObjByKeys(deployConfigResult);
+  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfigResult)!);
+
   return {
     success: true,
     data: {
-      deployConfig,
-      warpConfig,
+      deployConfig: {
+        ...deployConfig,
+        content: JSON.stringify(sortedDeployConfig),
+      },
+      warpConfig: {
+        ...warpConfig,
+        content: JSON.stringify(sortedWarpCoreConfig),
+      },
       warpRouteId,
       organization,
       username,
-      deployConfigResult,
-      warpConfigResult,
+      deployConfigResult: sortedDeployConfig,
+      warpConfigResult: sortedWarpCoreConfig,
     },
   };
 }
@@ -222,14 +230,11 @@ ${description.trim()}
 
 function getBranchName(
   warpRouteId: string,
-  deployConfig: WarpRouteDeployConfig,
-  warpConfig: WarpCoreConfig,
+  deployConfig: string,
+  warpConfig: string,
 ): ApiError | ApiSuccess<string> {
-  const sortedDeployConfig = sortObjByKeys(deployConfig);
-  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig)!);
-
-  const deployConfigBuffer = toBytes(JSON.stringify(sortedDeployConfig));
-  const warpConfigBuffer = toBytes(JSON.stringify(sortedWarpCoreConfig));
+  const deployConfigBuffer = toBytes(deployConfig);
+  const warpConfigBuffer = toBytes(warpConfig);
 
   try {
     const requestBodyHash = keccak256(

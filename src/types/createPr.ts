@@ -29,6 +29,21 @@ export const DeployFileSchema = z.object({
 
 export type DeployFile = z.infer<typeof DeployFileSchema>;
 
+export const MAX_IMAGE_SIZE = 100 * 1024; // 100 KB
+export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+
+export const ImageFileSchema = z
+  .instanceof(File)
+  .refine((file) => ALLOWED_IMAGE_TYPES.includes(file.type), {
+    message: `Invalid image file type, valid types are: ${ALLOWED_IMAGE_TYPES.join(', ')}`,
+  })
+  .refine((file) => file.size <= MAX_IMAGE_SIZE, {
+    message: 'File size should not exceed 100 KBs',
+  })
+  .optional();
+
+export type ImageFile = z.infer<typeof ImageFileSchema>;
+
 export interface CreatePrData {
   prUrl: string;
 }
@@ -38,6 +53,7 @@ export const CreatePrBodySchema = z
     deployConfig: DeployFileSchema,
     warpConfig: DeployFileSchema,
     warpRouteId: z.string().min(1, 'Warp Route ID is required'),
+    logo: ImageFileSchema,
   })
   .merge(GitHubIdentitySchema);
 
@@ -53,7 +69,16 @@ export const VerifyPrSignatureSchema = z.object({
 
 export type VerifyPrSignature = z.infer<typeof VerifyPrSignatureSchema>;
 
+export const CreatePrFormSchema = z
+  .object({
+    logo: ImageFileSchema,
+  })
+  .merge(GitHubIdentitySchema);
+
+export type CreatePrForm = z.infer<typeof CreatePrFormSchema>;
+
 export type CreatePrRequestBody = {
   prBody: CreatePrBody;
   signatureVerification: VerifyPrSignature;
+  logo?: ImageFile;
 };
