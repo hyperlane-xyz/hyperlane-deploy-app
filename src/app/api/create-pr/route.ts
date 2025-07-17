@@ -49,14 +49,15 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const requestBody = validateRequestBody(prBody, logoBody);
+  const requestBody = await validateRequestBody(prBody, logoBody);
   if (!requestBody.success) return sendJsonResponse(400, { error: requestBody.error });
 
   const signatureVerificationResponse = await validateRequestSignature(signatureVerification);
   if (!signatureVerificationResponse.success)
     return sendJsonResponse(400, { error: signatureVerificationResponse.error });
 
-  const { deployConfig, warpConfig, warpRouteId, organization, username, logo } = requestBody.data;
+  const { deployConfig, warpConfig, warpRouteId, organization, username, logoFile } =
+    requestBody.data;
 
   const branch = getBranchName(warpRouteId, deployConfig.content, warpConfig.content);
   if (!branch.success) return sendJsonResponse(400, { error: branch.error });
@@ -86,8 +87,6 @@ export async function POST(req: NextRequest) {
     });
 
     const changesetFile = writeChangeset(`Add ${warpRouteId} warp route deploy artifacts`);
-    const logoFile = await getLogoFile(logo, warpRouteId);
-
     const filesToUpload: Array<{ content: ArrayBuffer | string; path: string }> = [
       deployConfig,
       warpConfig,
@@ -132,17 +131,19 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function validateRequestBody(
+async function validateRequestBody(
   body: unknown,
   logoBody: File | null,
-):
+): Promise<
   | ApiError
   | ApiSuccess<
       CreatePrBody & {
         deployConfigResult: WarpRouteDeployConfig;
         warpConfigResult: WarpCoreConfig;
+        logoFile: BufferFile | undefined;
       }
-    > {
+    >
+> {
   if (!body) return { error: 'Missing request body' };
 
   const parsedBody = CreatePrBodySchema.safeParse({ ...body, logo: logoBody });
@@ -159,19 +160,26 @@ function validateRequestBody(
   const warpConfigResult = validateStringToZodSchema(warpConfig.content, WarpCoreConfigSchema);
   if (!warpConfigResult) return { error: 'Invalid warp config content' };
 
+  const logoFile = await getLogoFile(logo, warpRouteId);
+
   const sortedDeployConfig = sortObjByKeys(deployConfigResult);
-  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfigResult)!);
+  const sortedWarpCoreConfig = sortObjByKeys(
+    sortWarpCoreConfig({
+      ...warpConfigResult,
+      tokens: warpConfigResult.tokens.map((token) => ({ ...token, logoURI: logoFile?.path })),
+    })!,
+  );
 
   return {
     success: true,
     data: {
       deployConfig: {
         ...deployConfig,
-        content: stringify(sortedDeployConfig),
+        content: stringify(sortedDeployConfig, { sortMapEntries: true }),
       },
       warpConfig: {
         ...warpConfig,
-        content: stringify(sortedWarpCoreConfig),
+        content: stringify(sortedWarpCoreConfig, { sortMapEntries: true }),
       },
       warpRouteId,
       organization,
@@ -179,6 +187,7 @@ function validateRequestBody(
       deployConfigResult: sortedDeployConfig,
       warpConfigResult: sortedWarpCoreConfig,
       logo,
+      logoFile,
     },
   };
 }
@@ -287,10 +296,12 @@ async function isValidBranchName(
   }
 }
 
+type BufferFile = { content: ArrayBuffer; path: string };
+
 async function getLogoFile(
   logo: File | undefined | null,
   warpRouteId: string,
-): Promise<{ content: ArrayBuffer; path: string } | undefined> {
+): Promise<BufferFile | undefined> {
   if (!logo) return undefined;
 
   const { symbol } = parseWarpRouteConfigId(warpRouteId);
