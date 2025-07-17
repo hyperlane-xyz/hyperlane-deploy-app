@@ -9,6 +9,7 @@ import { assert, ProtocolType } from '@hyperlane-xyz/utils';
 import { useMutation } from '@tanstack/react-query';
 import { stringify } from 'yaml';
 import { useToastError } from '../../components/toast/useToastError';
+import { warpRoutesPath } from '../../consts/consts';
 import {
   CreatePrBody,
   CreatePrForm,
@@ -23,8 +24,6 @@ import { useLatestDeployment } from './hooks';
 import { DeploymentType } from './types';
 import { getConfigsFilename, sortWarpCoreConfig } from './utils';
 import { isSyntheticTokenType } from './warp/utils';
-
-const warpRoutesPath = 'deployments/warp_routes';
 
 export function useCreateWarpRoutePR(onSuccess: () => void) {
   const { config, result } = useLatestDeployment();

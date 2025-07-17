@@ -26,10 +26,15 @@ export function downloadYamlFile(config: unknown | undefined, filename: string) 
   URL.revokeObjectURL(url);
 }
 
-export function getConfigsFilename(warpRouteId: string) {
-  const [_, label] = warpRouteId.split('/');
-
+export function parseWarpRouteConfigId(warpRouteId: string) {
+  const [symbol, label] = warpRouteId.split('/');
   assert(label, `Invalid warpRouteId format: ${warpRouteId}. Expected format: "prefix/label`);
+
+  return { symbol, label };
+}
+
+export function getConfigsFilename(warpRouteId: string) {
+  const { label } = parseWarpRouteConfigId(warpRouteId);
 
   return {
     deployConfigFilename: `${label}-deploy.yaml`,

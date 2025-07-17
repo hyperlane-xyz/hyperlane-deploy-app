@@ -53,7 +53,7 @@ export const CreatePrBodySchema = z
     deployConfig: DeployFileSchema,
     warpConfig: DeployFileSchema,
     warpRouteId: z.string().min(1, 'Warp Route ID is required'),
-    logo: ImageFileSchema,
+    logo: ImageFileSchema.nullable(),
   })
   .merge(GitHubIdentitySchema);
 

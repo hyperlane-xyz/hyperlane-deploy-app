@@ -8,8 +8,10 @@ import { Octokit } from '@octokit/rest';
 import humanId from 'human-id';
 import { NextRequest } from 'next/server';
 import { encodePacked, isHex, keccak256, toBytes, toHex, verifyMessage } from 'viem';
+import { stringify } from 'yaml';
 import { serverConfig } from '../../../consts/config.server';
-import { sortWarpCoreConfig } from '../../../features/deployment/utils';
+import { mimeToExt, warpRoutesPath } from '../../../consts/consts';
+import { parseWarpRouteConfigId, sortWarpCoreConfig } from '../../../features/deployment/utils';
 import { getOctokitClient } from '../../../libs/github';
 import { ApiError, ApiSuccess } from '../../../types/api';
 import {
@@ -28,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const prBody = JSON.parse(formData.get('prBody') as string);
   const signatureVerification = JSON.parse(formData.get('signatureVerification') as string);
-  const logo = formData.get('logo') as File | null;
+  const logoBody = formData.get('logo') as File | null;
 
   const {
     githubBaseBranch,
@@ -47,18 +49,14 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // if (logo) {
-  //   if (!)
-  // }
-
-  const requestBody = validateRequestBody(prBody);
+  const requestBody = validateRequestBody(prBody, logoBody);
   if (!requestBody.success) return sendJsonResponse(400, { error: requestBody.error });
 
   const signatureVerificationResponse = await validateRequestSignature(signatureVerification);
   if (!signatureVerificationResponse.success)
     return sendJsonResponse(400, { error: signatureVerificationResponse.error });
 
-  const { deployConfig, warpConfig, warpRouteId, organization, username } = requestBody.data;
+  const { deployConfig, warpConfig, warpRouteId, organization, username, logo } = requestBody.data;
 
   const branch = getBranchName(warpRouteId, deployConfig.content, warpConfig.content);
   if (!branch.success) return sendJsonResponse(400, { error: branch.error });
@@ -88,15 +86,26 @@ export async function POST(req: NextRequest) {
     });
 
     const changesetFile = writeChangeset(`Add ${warpRouteId} warp route deploy artifacts`);
+    const logoFile = await getLogoFile(logo, warpRouteId);
+
+    const filesToUpload: Array<{ content: ArrayBuffer | string; path: string }> = [
+      deployConfig,
+      warpConfig,
+      changesetFile,
+    ];
+    if (logoFile) filesToUpload.push(logoFile);
 
     // Upload files to the new branch
-    for (const file of [deployConfig, warpConfig, changesetFile]) {
+    for (const file of filesToUpload) {
       await octokit.repos.createOrUpdateFileContents({
         owner: githubForkOwner,
         repo: githubRepoName,
         path: file.path,
         message: `feat: add ${file.path}`,
-        content: Buffer.from(file.content).toString('base64'),
+        content:
+          typeof file.content === 'string'
+            ? Buffer.from(file.content).toString('base64')
+            : Buffer.from(file.content).toString('base64'),
         branch: branchName,
       });
     }
@@ -125,17 +134,21 @@ export async function POST(req: NextRequest) {
 
 function validateRequestBody(
   body: unknown,
+  logoBody: File | null,
 ):
   | ApiError
   | ApiSuccess<
-      CreatePrBody & { deployConfigResult: WarpRouteDeployConfig; warpConfigResult: WarpCoreConfig }
+      CreatePrBody & {
+        deployConfigResult: WarpRouteDeployConfig;
+        warpConfigResult: WarpCoreConfig;
+      }
     > {
   if (!body) return { error: 'Missing request body' };
 
-  const parsedBody = CreatePrBodySchema.safeParse(body);
+  const parsedBody = CreatePrBodySchema.safeParse({ ...body, logo: logoBody });
   if (!parsedBody.success) return { error: zodErrorToString(parsedBody.error) };
 
-  const { deployConfig, warpConfig, warpRouteId, organization, username } = parsedBody.data;
+  const { deployConfig, warpConfig, warpRouteId, organization, username, logo } = parsedBody.data;
 
   const deployConfigResult = validateStringToZodSchema(
     deployConfig.content,
@@ -154,17 +167,18 @@ function validateRequestBody(
     data: {
       deployConfig: {
         ...deployConfig,
-        content: JSON.stringify(sortedDeployConfig),
+        content: stringify(sortedDeployConfig),
       },
       warpConfig: {
         ...warpConfig,
-        content: JSON.stringify(sortedWarpCoreConfig),
+        content: stringify(sortedWarpCoreConfig),
       },
       warpRouteId,
       organization,
       username,
       deployConfigResult: sortedDeployConfig,
       warpConfigResult: sortedWarpCoreConfig,
+      logo,
     },
   };
 }
@@ -271,4 +285,20 @@ async function isValidBranchName(
     // Something else went wrong
     throw new Error(`Failed to check branch existence: ${error.message}`);
   }
+}
+
+async function getLogoFile(
+  logo: File | undefined | null,
+  warpRouteId: string,
+): Promise<{ content: ArrayBuffer; path: string } | undefined> {
+  if (!logo) return undefined;
+
+  const { symbol } = parseWarpRouteConfigId(warpRouteId);
+  const extension = mimeToExt[logo.type] || 'bin';
+  const basePath = `${warpRoutesPath}/${symbol}`;
+
+  return {
+    path: `${basePath}/logo.${extension}`,
+    content: await logo.arrayBuffer(),
+  };
 }
