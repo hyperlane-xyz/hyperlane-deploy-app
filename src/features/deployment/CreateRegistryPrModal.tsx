@@ -47,7 +47,7 @@ export function CreateRegistryPrModal({
       </p>
 
       <p className={styles.text}>
-        Optionally, you can include your Github username and organization!
+        Optionally, you can include your Github username, organization and upload a logo!
       </p>
 
       <Formik<CreatePrForm>
