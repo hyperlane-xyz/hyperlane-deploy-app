@@ -10,6 +10,7 @@ export const links = {
   ismDocs: 'https://docs.hyperlane.xyz/docs/protocol/ISM/modular-security',
   warpDocs: 'https://docs.hyperlane.xyz/docs/protocol/warp-routes/warp-routes-overview',
   warpUiDocs: 'https://docs.hyperlane.xyz/docs/guides/deploy-warp-route-UI',
+  warpTransferDocs: 'https://docs.hyperlane.xyz/docs/applications/warp-routes/interface',
   chains: 'https://docs.hyperlane.xyz/docs/resources/domains',
   twitter: 'https://x.com/hyperlane',
   blog: 'https://medium.com/hyperlane',
@@ -18,4 +19,5 @@ export const links = {
   bounty:
     'https://github.com/search?q=org:hyperlane-xyz+label:bounty+is:open+is:issue&type=issues&s=&o=desc',
   coinGecko: 'https://www.coingecko.com/',
+  ecosystemEmail: 'ecosystem@hyperlane.xyz',
 };
