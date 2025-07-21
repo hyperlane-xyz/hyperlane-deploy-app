@@ -127,6 +127,30 @@ export async function POST(req: NextRequest) {
 
     return sendJsonResponse(200, { data: { prUrl: pr.html_url }, success: true });
   } catch (err: any) {
+    // when using octokit.createOrUpdateFileContents and the file path already exists
+    // this will throw the following error, so instead of getting the sha of the existing file
+    // is it probably better to just tell the user that these files already exists
+    if (
+      err?.status === 422 &&
+      typeof err?.message === 'string' &&
+      err.message.includes(`"sha" wasn't supplied`)
+    ) {
+      try {
+        // if it hits this error the branch has already been created, hence we need to delete this branch
+        await octokit.git.deleteRef({
+          owner: githubForkOwner,
+          repo: githubRepoName,
+          ref: `heads/${branchName}`,
+        });
+        return sendJsonResponse(404, {
+          error:
+            'Files already exists in these path, please check the registry for these files or logo',
+        });
+      } catch (innerErr: any) {
+        return sendJsonResponse(500, { error: innerErr.message });
+      }
+    }
+
     return sendJsonResponse(500, { error: err.message });
   }
 }
