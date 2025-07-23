@@ -3,11 +3,11 @@
 import { chainAddresses as registryChainAddresses } from '@hyperlane-xyz/registry';
 import {
   ChainMap,
+  EVM_TOKEN_TYPE_TO_STANDARD,
   HypERC20Deployer,
   HyperlaneContractsMap,
   MultiProvider,
   ProviderType,
-  TOKEN_TYPE_TO_STANDARD,
   TokenFactories,
   TokenMetadataMap,
   WarpCoreConfig,
@@ -165,7 +165,7 @@ function generateTokenConfigs(
 
     warpCoreConfig.tokens.push({
       chainName,
-      standard: TOKEN_TYPE_TO_STANDARD[config.type],
+      standard: EVM_TOKEN_TYPE_TO_STANDARD[config.type],
       decimals,
       symbol: config.symbol || symbol,
       name,
