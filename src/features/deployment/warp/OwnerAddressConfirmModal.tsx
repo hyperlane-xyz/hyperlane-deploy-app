@@ -31,8 +31,8 @@ export function OwnerAddressConfirmModal({
         recommended that you use gnosis safes as owners for security purposes.
       </p>
       <p className="text-center text-sm text-gray-700">
-        If you wish to continue regardless press confirm, otherwise press cancel and edit the the
-        route owners
+        If you wish to continue regardless press confirm, otherwise press cancel and edit the route
+        owners
       </p>
       <ul className="w-full space-y-2 rounded-lg bg-blue-500/5 px-3 py-4">
         {nonSafeOwners.map((nonSafeOwner) => (
