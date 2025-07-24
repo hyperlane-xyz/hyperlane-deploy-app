@@ -1,12 +1,18 @@
 import { ErrorIcon, Modal } from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
 import { SolidButton } from '../../components/buttons/SolidButton';
+import { ImageInput } from '../../components/input/ImageInput';
 import { TextInput } from '../../components/input/TextField';
 import { A } from '../../components/text/A';
 import { H2 } from '../../components/text/Headers';
 import { links } from '../../consts/links';
 import { Color } from '../../styles/Color';
-import { CreatePrResponse, GithubIdentity, GitHubIdentitySchema } from '../../types/createPr';
+import {
+  CreatePrForm,
+  CreatePrFormSchema,
+  CreatePrResponse,
+  GithubIdentity,
+} from '../../types/createPr';
 import { normalizeEmptyStrings } from '../../utils/string';
 import { zodErrorToFormikErrors } from '../../utils/zod';
 
@@ -41,15 +47,15 @@ export function CreateRegistryPrModal({
       </p>
 
       <p className={styles.text}>
-        Optionally, you can include your Github username and organization!
+        Optionally, you can include your Github username, organization and upload a logo!
       </p>
 
-      <Formik<GithubIdentity>
+      <Formik<CreatePrForm>
         onSubmit={onConfirm}
         validate={validateForm}
         validateOnChange={false}
         validateOnBlur={false}
-        initialValues={{ organization: undefined, username: undefined }}
+        initialValues={{ organization: undefined, username: undefined, logo: undefined }}
       >
         {() => (
           <Form className="w-full">
@@ -79,35 +85,52 @@ export function CreateRegistryPrModal({
 }
 
 function InputSection() {
-  const { setFieldValue, values, errors } = useFormikContext<GithubIdentity>();
+  const { setFieldValue, values, errors } = useFormikContext<CreatePrForm>();
 
   return (
-    <div className="flex gap-4">
-      <div className="w-full">
-        <TextInput
-          className="w-full"
-          value={values.username ?? ''}
-          onChange={(v) => setFieldValue('username', v)}
-          placeholder="Github Username"
-        />
-        {errors.username && (
-          <div className="flex items-center gap-2 px-3 py-1.5">
-            <ErrorIcon width={14} height={14} color={Color.red['600']} className="shrink-0" />
-            <span className="text-xs text-red-600">{errors.username}</span>
-          </div>
-        )}
+    <div>
+      <div className="flex gap-4">
+        <div className="w-full">
+          <TextInput
+            className="w-full"
+            value={values.username ?? ''}
+            onChange={(v) => setFieldValue('username', v)}
+            placeholder="Github Username"
+          />
+          {errors.username && (
+            <div className="flex items-center gap-2 px-3 py-1.5">
+              <ErrorIcon width={14} height={14} color={Color.red['600']} className="shrink-0" />
+              <span className="text-xs text-red-600">{errors.username}</span>
+            </div>
+          )}
+        </div>
+        <div className="w-full">
+          <TextInput
+            className="w-full"
+            value={values.organization ?? ''}
+            onChange={(v) => setFieldValue('organization', v)}
+            placeholder="Organization"
+          />
+          {errors.organization && (
+            <div className="flex items-center gap-2 px-3 py-1.5">
+              <ErrorIcon width={14} height={14} color={Color.red['600']} className="shrink-0" />
+              <span className="text-xs text-red-600">{errors.organization}</span>
+            </div>
+          )}
+        </div>
       </div>
       <div className="w-full">
-        <TextInput
+        <ImageInput
           className="w-full"
-          value={values.organization ?? ''}
-          onChange={(v) => setFieldValue('organization', v)}
-          placeholder="Organization"
+          onChange={(file) => setFieldValue('logo', file)}
+          placeholder="File"
+          value={values.logo}
+          onClear={() => setFieldValue('logo', undefined)}
         />
-        {errors.organization && (
+        {errors.logo && (
           <div className="flex items-center gap-2 px-3 py-1.5">
             <ErrorIcon width={14} height={14} color={Color.red['600']} className="shrink-0" />
-            <span className="text-xs text-red-600">{errors.organization}</span>
+            <span className="text-xs text-red-600">{errors.logo}</span>
           </div>
         )}
       </div>
@@ -151,13 +174,13 @@ const styles = {
   link: 'underline underline-offset-2 hover:opacity-80 active:opacity-70',
 };
 
-function validateForm(values: GithubIdentity) {
-  const normalizedValues = normalizeEmptyStrings(values);
-  const parsedResult = GitHubIdentitySchema.safeParse(normalizedValues);
-
-  if (!parsedResult.success) {
-    return zodErrorToFormikErrors(parsedResult.error);
-  }
+function validateForm(values: CreatePrForm) {
+  const normalizedValues = normalizeEmptyStrings({
+    organization: values.organization,
+    username: values.username,
+  });
+  const parsedResult = CreatePrFormSchema.safeParse({ ...normalizedValues, logo: values.logo });
+  if (!parsedResult.success) return zodErrorToFormikErrors(parsedResult.error);
 
   return undefined;
 }

@@ -6,29 +6,31 @@ import {
 } from '@hyperlane-xyz/sdk';
 import { Octokit } from '@octokit/rest';
 import humanId from 'human-id';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest } from 'next/server';
 import { encodePacked, isHex, keccak256, toBytes, toHex, verifyMessage } from 'viem';
-import { serverConfig } from '../../consts/config.server';
-import { sortWarpCoreConfig } from '../../features/deployment/utils';
-import { getOctokitClient } from '../../libs/github';
-import { ApiError, ApiSuccess } from '../../types/api';
+import { stringify } from 'yaml';
+import { serverConfig } from '../../../consts/config.server';
+import { mimeToExt, warpRoutesPath } from '../../../consts/consts';
+import { parseWarpRouteConfigId, sortWarpCoreConfig } from '../../../features/deployment/utils';
+import { getOctokitClient } from '../../../libs/github';
+import { ApiError, ApiSuccess } from '../../../types/api';
 import {
   CreatePrBody,
   CreatePrBodySchema,
-  CreatePrResponse,
   DeployFile,
   VerifyPrSignature,
   VerifyPrSignatureSchema,
-} from '../../types/createPr';
-import { sendJsonResponse } from '../../utils/api';
-import { sortObjByKeys } from '../../utils/object';
-import { validateStringToZodSchema, zodErrorToString } from '../../utils/zod';
+} from '../../../types/createPr';
+import { sendJsonResponse } from '../../../utils/api';
+import { sortObjByKeys } from '../../../utils/object';
+import { validateStringToZodSchema, zodErrorToString } from '../../../utils/zod';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<CreatePrResponse | ApiError>,
-) {
-  if (req.method !== 'POST') return sendJsonResponse(res, 405, { error: 'Method not allowed' });
+export async function POST(req: NextRequest) {
+  const formData = await req.formData();
+
+  const prBody = JSON.parse(formData.get('prBody') as string);
+  const signatureVerification = JSON.parse(formData.get('signatureVerification') as string);
+  const logoBody = formData.get('logo') as File | null;
 
   const {
     githubBaseBranch,
@@ -39,7 +41,7 @@ export default async function handler(
   } = serverConfig;
   const octokit = getOctokitClient();
   if (!octokit) {
-    return sendJsonResponse(res, 500, {
+    return sendJsonResponse(500, {
       error:
         serverEnvironment === 'development'
           ? 'Missing Github configurations, check your environment variables'
@@ -47,33 +49,24 @@ export default async function handler(
     });
   }
 
-  const { prBody, signatureVerification } = req.body;
-
-  const requestBody = validateRequestBody(prBody);
-  if (!requestBody.success) return sendJsonResponse(res, 400, { error: requestBody.error });
+  const requestBody = await validateRequestBody(prBody, logoBody);
+  if (!requestBody.success) return sendJsonResponse(400, { error: requestBody.error });
 
   const signatureVerificationResponse = await validateRequestSignature(signatureVerification);
   if (!signatureVerificationResponse.success)
-    return sendJsonResponse(res, 400, { error: signatureVerificationResponse.error });
+    return sendJsonResponse(400, { error: signatureVerificationResponse.error });
 
-  const {
-    deployConfig,
-    warpConfig,
-    warpRouteId,
-    organization,
-    username,
-    deployConfigResult,
-    warpConfigResult,
-  } = requestBody.data;
+  const { deployConfig, warpConfig, warpRouteId, organization, username, logoFile } =
+    requestBody.data;
 
-  const branch = getBranchName(warpRouteId, deployConfigResult, warpConfigResult);
-  if (!branch.success) return sendJsonResponse(res, 400, { error: branch.error });
+  const branch = getBranchName(warpRouteId, deployConfig.content, warpConfig.content);
+  if (!branch.success) return sendJsonResponse(400, { error: branch.error });
 
   const branchName = branch.data;
   const validBranch = await isValidBranchName(octokit, githubForkOwner, githubRepoName, branchName);
 
   if (!validBranch)
-    return sendJsonResponse(res, 400, { error: 'A PR already exists with these config!' });
+    return sendJsonResponse(400, { error: 'A PR already exists with these config!' });
 
   try {
     // Get latest SHA of base branch in fork
@@ -94,15 +87,24 @@ export default async function handler(
     });
 
     const changesetFile = writeChangeset(`Add ${warpRouteId} warp route deploy artifacts`);
+    const filesToUpload: Array<{ content: ArrayBuffer | string; path: string }> = [
+      deployConfig,
+      warpConfig,
+      changesetFile,
+    ];
+    if (logoFile) filesToUpload.push(logoFile);
 
     // Upload files to the new branch
-    for (const file of [deployConfig, warpConfig, changesetFile]) {
+    for (const file of filesToUpload) {
       await octokit.repos.createOrUpdateFileContents({
         owner: githubForkOwner,
         repo: githubRepoName,
         path: file.path,
         message: `feat: add ${file.path}`,
-        content: Buffer.from(file.content).toString('base64'),
+        content:
+          typeof file.content === 'string'
+            ? Buffer.from(file.content).toString('base64')
+            : Buffer.from(file.content).toString('base64'),
         branch: branchName,
       });
     }
@@ -123,25 +125,55 @@ export default async function handler(
       }`,
     });
 
-    return sendJsonResponse(res, 200, { data: { prUrl: pr.html_url }, success: true });
+    return sendJsonResponse(200, { data: { prUrl: pr.html_url }, success: true });
   } catch (err: any) {
-    return sendJsonResponse(res, 500, { error: err.message });
+    // when using octokit.createOrUpdateFileContents and the file path already exists
+    // this will throw the following error, so instead of getting the sha of the existing file
+    // is it probably better to just tell the user that these files already exists
+    if (
+      err?.status === 422 &&
+      typeof err?.message === 'string' &&
+      err.message.includes(`"sha" wasn't supplied`)
+    ) {
+      try {
+        // if it hits this error the branch has already been created, hence we need to delete this branch
+        await octokit.git.deleteRef({
+          owner: githubForkOwner,
+          repo: githubRepoName,
+          ref: `heads/${branchName}`,
+        });
+        return sendJsonResponse(404, {
+          error:
+            'Files already exists in this path, please check the registry for these files or logo',
+        });
+      } catch (innerErr: any) {
+        return sendJsonResponse(500, { error: innerErr.message });
+      }
+    }
+
+    return sendJsonResponse(500, { error: err.message });
   }
 }
 
-export function validateRequestBody(
+async function validateRequestBody(
   body: unknown,
-):
+  logoBody: File | null,
+): Promise<
   | ApiError
   | ApiSuccess<
-      CreatePrBody & { deployConfigResult: WarpRouteDeployConfig; warpConfigResult: WarpCoreConfig }
-    > {
+      CreatePrBody & {
+        deployConfigResult: WarpRouteDeployConfig;
+        warpConfigResult: WarpCoreConfig;
+        logoFile: BufferFile | undefined;
+      }
+    >
+> {
   if (!body) return { error: 'Missing request body' };
 
-  const parsedBody = CreatePrBodySchema.safeParse(body);
+  const parsedBody = CreatePrBodySchema.safeParse({ ...body, logo: logoBody });
   if (!parsedBody.success) return { error: zodErrorToString(parsedBody.error) };
 
-  const { deployConfig, warpConfig, warpRouteId, organization, username } = parsedBody.data;
+  const { deployConfig, warpConfig, warpRouteId, organization, username, logo } = parsedBody.data;
 
   const deployConfigResult = validateStringToZodSchema(
     deployConfig.content,
@@ -152,16 +184,34 @@ export function validateRequestBody(
   const warpConfigResult = validateStringToZodSchema(warpConfig.content, WarpCoreConfigSchema);
   if (!warpConfigResult) return { error: 'Invalid warp config content' };
 
+  const logoFile = await getLogoFile(logo, warpRouteId);
+
+  const sortedDeployConfig = sortObjByKeys(deployConfigResult);
+  const sortedWarpCoreConfig = sortObjByKeys(
+    sortWarpCoreConfig({
+      ...warpConfigResult,
+      tokens: warpConfigResult.tokens.map((token) => ({ ...token, logoURI: logoFile?.path })),
+    })!,
+  );
+
   return {
     success: true,
     data: {
-      deployConfig,
-      warpConfig,
+      deployConfig: {
+        ...deployConfig,
+        content: stringify(sortedDeployConfig, { sortMapEntries: true }),
+      },
+      warpConfig: {
+        ...warpConfig,
+        content: stringify(sortedWarpCoreConfig, { sortMapEntries: true }),
+      },
       warpRouteId,
       organization,
       username,
-      deployConfigResult,
-      warpConfigResult,
+      deployConfigResult: sortedDeployConfig,
+      warpConfigResult: sortedWarpCoreConfig,
+      logo,
+      logoFile,
     },
   };
 }
@@ -227,14 +277,11 @@ ${description.trim()}
 
 function getBranchName(
   warpRouteId: string,
-  deployConfig: WarpRouteDeployConfig,
-  warpConfig: WarpCoreConfig,
+  deployConfig: string,
+  warpConfig: string,
 ): ApiError | ApiSuccess<string> {
-  const sortedDeployConfig = sortObjByKeys(deployConfig);
-  const sortedWarpCoreConfig = sortObjByKeys(sortWarpCoreConfig(warpConfig)!);
-
-  const deployConfigBuffer = toBytes(JSON.stringify(sortedDeployConfig));
-  const warpConfigBuffer = toBytes(JSON.stringify(sortedWarpCoreConfig));
+  const deployConfigBuffer = toBytes(deployConfig);
+  const warpConfigBuffer = toBytes(warpConfig);
 
   try {
     const requestBodyHash = keccak256(
@@ -271,4 +318,22 @@ async function isValidBranchName(
     // Something else went wrong
     throw new Error(`Failed to check branch existence: ${error.message}`);
   }
+}
+
+type BufferFile = { content: ArrayBuffer; path: string };
+
+async function getLogoFile(
+  logo: File | undefined | null,
+  warpRouteId: string,
+): Promise<BufferFile | undefined> {
+  if (!logo) return undefined;
+
+  const { symbol } = parseWarpRouteConfigId(warpRouteId);
+  const extension = mimeToExt[logo.type];
+  const basePath = `${warpRoutesPath}/${symbol}`;
+
+  return {
+    path: `${basePath}/logo.${extension}`,
+    content: await logo.arrayBuffer(),
+  };
 }
