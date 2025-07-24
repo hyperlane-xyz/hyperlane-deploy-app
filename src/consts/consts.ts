@@ -14,11 +14,18 @@ export enum POPULAR_COIN_GECKO_IDS {
   'WETH' = 'weth',
 }
 
+export enum ImageTypes {
+  PNG = 'image/png',
+  JPEG = 'image/jpeg',
+  JPG = 'image/jpg',
+  SVG = 'image/svg+xml',
+}
+
 export const mimeToExt: Record<string, string> = {
-  'image/jpeg': 'jpeg',
-  'image/jpg': 'jpg',
-  'image/png': 'png',
-  'image/svg+xml': 'svg',
+  [ImageTypes.JPEG]: 'jpeg',
+  [ImageTypes.JPG]: 'jpg',
+  [ImageTypes.PNG]: 'png',
+  [ImageTypes.SVG]: 'svg',
 };
 
 export const warpRoutesPath = 'deployments/warp_routes';

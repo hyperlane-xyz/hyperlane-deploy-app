@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
         });
         return sendJsonResponse(404, {
           error:
-            'Files already exists in these path, please check the registry for these files or logo',
+            'Files already exists in this path, please check the registry for these files or logo',
         });
       } catch (innerErr: any) {
         return sendJsonResponse(500, { error: innerErr.message });
@@ -329,7 +329,7 @@ async function getLogoFile(
   if (!logo) return undefined;
 
   const { symbol } = parseWarpRouteConfigId(warpRouteId);
-  const extension = mimeToExt[logo.type] || 'bin';
+  const extension = mimeToExt[logo.type];
   const basePath = `${warpRoutesPath}/${symbol}`;
 
   return {

@@ -1,7 +1,7 @@
 import { ErrorIcon, Modal } from '@hyperlane-xyz/widgets';
 import { Form, Formik, useFormikContext } from 'formik';
 import { SolidButton } from '../../components/buttons/SolidButton';
-import { ImageInput } from '../../components/input/ImageUpload';
+import { ImageInput } from '../../components/input/ImageInput';
 import { TextInput } from '../../components/input/TextField';
 import { A } from '../../components/text/A';
 import { H2 } from '../../components/text/Headers';

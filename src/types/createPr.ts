@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ImageTypes } from '../consts/consts';
 import { ApiResponseBody } from './api';
 
 const githubNameRegex = /^(?!-)(?!.*--)[a-zA-Z0-9-]{1,39}(?<!-)$/;
@@ -30,11 +31,16 @@ export const DeployFileSchema = z.object({
 export type DeployFile = z.infer<typeof DeployFileSchema>;
 
 export const MAX_IMAGE_SIZE = 100 * 1024; // 100 KB
-export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+export const ALLOWED_IMAGE_TYPES: ImageTypes[] = [
+  ImageTypes.PNG,
+  ImageTypes.JPEG,
+  ImageTypes.JPG,
+  ImageTypes.SVG,
+];
 
 export const ImageFileSchema = z
   .instanceof(File)
-  .refine((file) => ALLOWED_IMAGE_TYPES.includes(file.type), {
+  .refine((file) => ALLOWED_IMAGE_TYPES.includes(file.type as ImageTypes), {
     message: `Invalid image file type, valid types are: ${ALLOWED_IMAGE_TYPES.join(', ')}`,
   })
   .refine((file) => file.size <= MAX_IMAGE_SIZE, {
