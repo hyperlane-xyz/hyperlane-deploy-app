@@ -31,12 +31,7 @@ export const DeployFileSchema = z.object({
 export type DeployFile = z.infer<typeof DeployFileSchema>;
 
 export const MAX_IMAGE_SIZE = 100 * 1024; // 100 KB
-export const ALLOWED_IMAGE_TYPES: ImageTypes[] = [
-  ImageTypes.PNG,
-  ImageTypes.JPEG,
-  ImageTypes.JPG,
-  ImageTypes.SVG,
-];
+export const ALLOWED_IMAGE_TYPES: ImageTypes[] = [ImageTypes.PNG, ImageTypes.JPEG, ImageTypes.SVG];
 
 export const ImageFileSchema = z
   .instanceof(File)
