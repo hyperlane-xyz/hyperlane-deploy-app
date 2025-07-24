@@ -75,13 +75,10 @@ export function WarpDeploymentReview() {
       await Promise.all(
         Object.entries(deploymentConfig.config).map(async ([chainName, config]) => {
           const validGnosisSafe = await isGnosisSafe(multiProvider, config.owner, chainName);
-          if (!validGnosisSafe) {
-            return { chainName, config };
-          }
-          return null;
+          return !validGnosisSafe ? { chainName, config } : undefined;
         }),
       )
-    ).filter((x) => x !== null);
+    ).filter((x): x is NonSafeOwnersConfig => Boolean(x));
 
     setLoading(false);
     if (invalidOwners.length > 0) {
@@ -258,8 +255,13 @@ function ButtonSection({
 
   return (
     <div className="mt-4 flex items-center justify-between">
-      <BackButton page={CardPage.WarpForm} />
-      <SolidButton onClick={onClickContinue} className="gap-3 px-5 py-2" color="accent">
+      <BackButton page={CardPage.WarpForm} disabled={isPending || loading} />
+      <SolidButton
+        onClick={onClickContinue}
+        className="gap-3 px-5 py-2"
+        color="accent"
+        disabled={isPending || loading}
+      >
         {isPending || loading ? (
           <SpinnerIcon width={20} height={20} color={Color.white} className="mx-6" />
         ) : (
