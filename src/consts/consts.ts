@@ -17,13 +17,11 @@ export enum POPULAR_COIN_GECKO_IDS {
 export enum ImageTypes {
   PNG = 'image/png',
   JPEG = 'image/jpeg',
-  JPG = 'image/jpg',
   SVG = 'image/svg+xml',
 }
 
 export const mimeToExt: Record<string, string> = {
-  [ImageTypes.JPEG]: 'jpeg',
-  [ImageTypes.JPG]: 'jpg',
+  [ImageTypes.JPEG]: 'jpg',
   [ImageTypes.PNG]: 'png',
   [ImageTypes.SVG]: 'svg',
 };
