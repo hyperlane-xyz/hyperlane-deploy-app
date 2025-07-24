@@ -2,8 +2,12 @@ import { TokenType } from '@hyperlane-xyz/sdk';
 import { Button, ChevronIcon, Modal, useModal } from '@hyperlane-xyz/widgets';
 import { FormButton } from '../../../components/buttons/FormButton';
 
-const TokenTypes = Object.values(TokenType).sort();
-const PopularTokenTypes = [TokenType.collateral, TokenType.native, TokenType.synthetic];
+const TokenTypes = [
+  TokenType.collateral,
+  TokenType.native,
+  TokenType.synthetic,
+  TokenType.collateralFiat,
+];
 export const TokenTypeDescriptions = {
   [TokenType.collateral]: {
     label: 'Collateral',
@@ -13,46 +17,13 @@ export const TokenTypeDescriptions = {
     label: 'Collateral Fiat',
     description: 'A lock-and-mint wrapper for the FiatToken standard by Circle.',
   },
-  [TokenType.collateralUri]: {
-    label: 'Collateral NFT',
-    description: 'A lock-and-mint wrapper for ERC721 tokens.',
-  },
-  [TokenType.collateralVault]: {
-    label: 'Collateral Vault',
-    description:
-      'A lock-and-mint wrapper for ERC4626 vaults. Yields are manually claimed by owner.',
-  },
-  [TokenType.collateralVaultRebase]: {
-    label: 'Collateral Rebased Vault',
-    description: 'A lock-and-mint wrapper for ERC4626 vaults. Rebases yields to token holders.',
-  },
   [TokenType.native]: {
     label: 'Native',
     description: 'A lock-and-mint wrapper for native currencies such as Ether (ETH).',
   },
-  [TokenType.nativeScaled]: {
-    label: 'Native Scaled',
-    description: 'A native type but with support for token decimal scaling.',
-  },
   [TokenType.synthetic]: {
     label: 'Synthetic',
     description: 'A synthetic HypERC20 token to pair with any collateralized type.',
-  },
-  [TokenType.syntheticRebase]: {
-    label: 'Synthetic Rebased',
-    description: 'A synthetic HypERC20 token to pair with a Collateral Rebased Vault.',
-  },
-  [TokenType.syntheticUri]: {
-    label: 'Synthetic NFT',
-    description: 'A synthetic HypErc721 token to pair with a Collateral NFT.',
-  },
-  [TokenType.XERC20]: {
-    label: 'xERC20',
-    description: 'A lock-and-mint wrapper for xERC20 tokens.',
-  },
-  [TokenType.XERC20Lockbox]: {
-    label: 'xERC20 Lockbox',
-    description: 'A lock-and-mint wrapper for xERC20 Lockbox tokens.',
   },
 };
 
@@ -74,19 +45,11 @@ export function TokenTypeSelectField({
     <div className="flex-1 grow">
       <TokenTypeButton value={value} onClick={open} />
       <Modal isOpen={isOpen} close={close} panelClassname="px-3 py-3 max-w-lg">
-        <h2 className="px-2 pb-1.5 text-gray-600">Popular Token Types</h2>
+        <h2 className="px-2 pb-1.5 text-gray-600">Token Types</h2>
         <div className="divide-y">
-          {PopularTokenTypes.map((t, i) => (
+          {TokenTypes.map((t, i) => (
             <TokenTypeOption type={t} onClick={onClick} key={i} />
           ))}
-        </div>
-        <h2 className="border-gray-100 px-2 pb-2 pt-4 text-gray-600">Other Token Types</h2>
-        <div className="divide-y">
-          {TokenTypes.map((t, i) =>
-            PopularTokenTypes.includes(t) ? null : (
-              <TokenTypeOption type={t} onClick={onClick} key={i} />
-            ),
-          )}
         </div>
       </Modal>
     </div>
