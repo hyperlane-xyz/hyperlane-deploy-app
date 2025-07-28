@@ -115,8 +115,11 @@ export function WarpDeploymentSuccess() {
       <div className="flex w-full flex-col items-center space-y-4 py-2 text-md">
         <H1 className="text-center">Your Warp Route is Ready!</H1>
         <p className="max-w-lg text-center leading-relaxed">
-          You can now use your route to transfer tokens across chains. Remaining funds in the
-          deployer have been refunded.
+          You can now use your route to{' '}
+          <A className={styles.link} href={links.warpTransferDocs}>
+            transfer
+          </A>{' '}
+          tokens across chains. Remaining funds in the deployer have been refunded.
         </p>
         <H2>Next Steps:</H2>
         <ol className="max-w-sm space-y-4">
@@ -172,6 +175,10 @@ export function WarpDeploymentSuccess() {
             <A className={styles.link} href={links.registry}>
               Hyperlane Registry
             </A>{' '}
+            , email your Warp configs to{' '}
+            <A className={styles.link} href={`mailto:${links.ecosystemEmail}`}>
+              {links.ecosystemEmail}
+            </A>{' '}
             or you can open a PR by clicking{' '}
             <button
               className={clsx(styles.link, 'inline-flex items-center gap-1')}
@@ -180,13 +187,6 @@ export function WarpDeploymentSuccess() {
               <span> here </span>
               <Image src={FolderCodeIcon} width={20} height={20} alt="download-icon" />
             </button>
-          </li>
-          <li>
-            5.{' '}
-            <A className={styles.link} href={links.warpUiDocs}>
-              Setup a DApp
-            </A>{' '}
-            for users to make transfers
           </li>
         </ol>
 
