@@ -28,9 +28,14 @@ import { validateStringToZodSchema, zodErrorToString } from '../../../utils/zod'
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
 
-  const prBody = JSON.parse(formData.get('prBody') as string);
-  const signatureVerification = JSON.parse(formData.get('signatureVerification') as string);
+  let prBody: string, signatureVerification: string;
   const logoBody = formData.get('logo') as File | null;
+  try {
+    prBody = JSON.parse(formData.get('prBody') as string);
+    signatureVerification = JSON.parse(formData.get('signatureVerification') as string);
+  } catch {
+    return sendJsonResponse(400, { error: 'Invalid JSON in request body' });
+  }
 
   const {
     githubBaseBranch,
@@ -147,7 +152,9 @@ export async function POST(req: NextRequest) {
             'Files already exists in this path, please check the registry for these files or logo',
         });
       } catch (innerErr: any) {
-        return sendJsonResponse(500, { error: innerErr.message });
+        return sendJsonResponse(500, {
+          error: serverEnvironment === 'development' ? innerErr.message : 'Internal server error',
+        });
       }
     }
 
