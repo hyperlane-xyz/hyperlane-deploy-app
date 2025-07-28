@@ -15,10 +15,12 @@ export function CoinGeckoConfirmationModal({
   isOpen,
   onCancel,
   onSubmit,
+  close,
 }: {
   isOpen: boolean;
   onCancel: () => void;
   onSubmit: (values: CoinGeckoFormValues) => void;
+  close: () => void;
 }) {
   const { result } = useLatestDeployment();
   const initialCoinGeckoId = getInitialCoinGeckoId(result);

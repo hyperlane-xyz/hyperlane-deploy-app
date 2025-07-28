@@ -1,49 +1,78 @@
+import { BaseRegistry } from '@hyperlane-xyz/registry';
 import { TOKEN_COLLATERALIZED_STANDARDS } from '@hyperlane-xyz/sdk';
-import { objKeys, shortenAddress } from '@hyperlane-xyz/utils';
+import { shortenAddress } from '@hyperlane-xyz/utils';
 import { CopyIcon, useModal } from '@hyperlane-xyz/widgets';
 import clsx from 'clsx';
 import Image from 'next/image';
+import { useCallback, useMemo, useState } from 'react';
 import { RestartButton } from '../../../components/buttons/RestartButton';
 import { A } from '../../../components/text/A';
 import { H1, H2 } from '../../../components/text/Headers';
 import { links } from '../../../consts/links';
 import DownloadIcon from '../../../images/icons/download-icon.svg';
+import FolderCodeIcon from '../../../images/icons/folder-code-icon.svg';
 import { Color } from '../../../styles/Color';
 import { CoinGeckoConfirmationModal } from '../CoinGeckoConfirmationModal';
+import { CreateRegistryPrModal } from '../CreateRegistryPrModal';
+import { useCreateWarpRoutePR } from '../github';
 import { useDeploymentHistory, useLatestDeployment, useWarpDeploymentConfig } from '../hooks';
 import { DeploymentType } from '../types';
-import { downloadYamlFile, tryCopyConfig } from '../utils';
+import { downloadYamlFile, getConfigsFilename, sortWarpCoreConfig, tryCopyConfig } from '../utils';
 import { CoinGeckoFormValues } from './types';
+import { isSyntheticTokenType } from './utils';
 
 export function WarpDeploymentSuccess() {
   const { deploymentConfig } = useWarpDeploymentConfig();
   const { updateDeployment, currentIndex } = useDeploymentHistory();
   const { close, isOpen, open } = useModal();
+  const { close: closeCreatePr, isOpen: isCreatePrOpen, open: openCreatePr } = useModal();
+  const [hasSubmittedPr, setHasSubmittedPr] = useState(false);
+
+  const onPrCreationSuccess = useCallback(() => setHasSubmittedPr(true), []);
+
+  const { mutate, isPending, data: createPrData } = useCreateWarpRoutePR(onPrCreationSuccess);
+
   const firstOwner = Object.values(deploymentConfig?.config || {})[0]?.owner;
   const firstOwnerDisplay = firstOwner ? ` (${shortenAddress(firstOwner)})` : '';
 
   const deploymentContext = useLatestDeployment();
-  const onClickCopyConfig = () => tryCopyConfig(deploymentContext?.result?.result);
+
+  const warpRouteId = useMemo(() => {
+    if (!deploymentContext.config?.config || deploymentContext.config.type !== DeploymentType.Warp)
+      return undefined;
+    const deployConfig = deploymentContext.config.config;
+    const firstNonSynthetic = Object.values(deployConfig).find(
+      (c) => !isSyntheticTokenType(c.type),
+    );
+
+    if (!firstNonSynthetic || !firstNonSynthetic.symbol) return undefined;
+    const symbol = firstNonSynthetic.symbol;
+
+    return BaseRegistry.warpDeployConfigToId(deployConfig, { symbol });
+  }, [deploymentContext]);
+
+  const onClickCopyConfig = () =>
+    tryCopyConfig(sortWarpCoreConfig(deploymentContext?.result?.result));
   const onClickCopyDeployConfig = () => tryCopyConfig(deploymentContext?.config.config);
 
   const downloadDeployConfig = () => {
-    if (!deploymentContext?.config.config || deploymentContext.config.type !== DeploymentType.Warp)
-      return;
+    if (!warpRouteId) return;
 
     const deployConfigResult = deploymentContext.config.config;
-    const chains = objKeys(deployConfigResult).sort();
-    const filename = `${chains.join('-')}-deploy.yaml`;
-    downloadYamlFile(deployConfigResult, filename);
+    const { deployConfigFilename } = getConfigsFilename(warpRouteId);
+    downloadYamlFile(deployConfigResult, deployConfigFilename);
   };
 
   const downloadWarpConfig = () => {
+    if (!warpRouteId) return;
     if (!deploymentContext?.result?.result || deploymentContext.result.type !== DeploymentType.Warp)
       return;
 
-    const warpConfigResult = deploymentContext.result.result;
-    const chains = warpConfigResult.tokens.map((token) => token.chainName).sort();
-    const filename = `${chains.join('-')}-config.yaml`;
-    downloadYamlFile(warpConfigResult, filename);
+    const warpConfigResult = sortWarpCoreConfig(deploymentContext.result.result);
+    if (!warpConfigResult) return;
+
+    const { warpConfigFilename } = getConfigsFilename(warpRouteId);
+    downloadYamlFile(warpConfigResult, warpConfigFilename);
   };
 
   const onCancelCoinGeckoId = () => {
@@ -142,7 +171,15 @@ export function WarpDeploymentSuccess() {
             4. Add your route to the{' '}
             <A className={styles.link} href={links.registry}>
               Hyperlane Registry
-            </A>
+            </A>{' '}
+            or you can open a PR by clicking{' '}
+            <button
+              className={clsx(styles.link, 'inline-flex items-center gap-1')}
+              onClick={openCreatePr}
+            >
+              <span> here </span>
+              <Image src={FolderCodeIcon} width={20} height={20} alt="download-icon" />
+            </button>
           </li>
           <li>
             5.{' '}
@@ -159,6 +196,15 @@ export function WarpDeploymentSuccess() {
         isOpen={isOpen}
         onCancel={onCancelCoinGeckoId}
         onSubmit={onConfirmCoinGeckoId}
+        close={close}
+      />
+      <CreateRegistryPrModal
+        isOpen={isCreatePrOpen}
+        onCancel={closeCreatePr}
+        onConfirm={mutate}
+        confirmDisabled={hasSubmittedPr}
+        disabled={isPending}
+        response={createPrData}
       />
     </>
   );
