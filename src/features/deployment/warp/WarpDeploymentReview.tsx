@@ -1,6 +1,6 @@
 import { WarpRouteDeployConfigSchema } from '@hyperlane-xyz/sdk';
 import { isAddress, objLength } from '@hyperlane-xyz/utils';
-import { IconButton, PencilIcon, SpinnerIcon } from '@hyperlane-xyz/widgets';
+import { IconButton, PencilIcon, SpinnerIcon, useModal } from '@hyperlane-xyz/widgets';
 import Image from 'next/image';
 import { toast } from 'react-toastify';
 import { BackButton } from '../../../components/buttons/BackButton';
@@ -22,19 +22,90 @@ import { TokenTypeDescriptions } from './TokenTypeSelectField';
 import { isSyntheticTokenType } from './utils';
 
 // TODO move to widgets lib
+import { useState } from 'react';
 import InfoCircle from '../../../images/icons/info-circle.svg';
+import { isGnosisSafe } from '../../../utils/safe';
+import { NonSafeOwnersConfig, OwnerAddressConfirmModal } from './OwnerAddressConfirmModal';
 import { useCheckAccountBalances } from './validation';
 
 export function WarpDeploymentReview() {
+  const multiProvider = useMultiProvider();
+  const { deploymentConfig } = useWarpDeploymentConfig();
+  const { addDeployment } = useDeploymentHistory();
+  const { setPage } = useCardNav();
+  const { checkBalances } = useCheckAccountBalances();
+  const { open, close, isOpen } = useModal();
+  const [nonSafeOwners, setNonSafeOwners] = useState<NonSafeOwnersConfig[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const onConfirmContinue = () => {
+    if (!deploymentConfig) return;
+
+    addDeployment({
+      status: DeploymentStatus.Configured,
+      config: deploymentConfig,
+    });
+    setPage(CardPage.WarpDeploy);
+  };
+
+  const onClose = () => {
+    setNonSafeOwners([]);
+    close();
+  };
+
+  const onClickContinue = async () => {
+    if (!deploymentConfig) return;
+    // Re-validate config before proceeding in case edits broke something
+    const schemaResult = WarpRouteDeployConfigSchema.safeParse(deploymentConfig.config);
+    if (!schemaResult.success) {
+      toast.error('Invalid config, please fix before deploying');
+      return;
+    }
+
+    const chainNames = deploymentConfig.chains;
+    setLoading(true);
+
+    const balanceResult = await checkBalances(chainNames);
+    if (!balanceResult?.success) {
+      toast.error(balanceResult.error);
+      return setLoading(false);
+    }
+
+    const invalidOwners = (
+      await Promise.all(
+        Object.entries(deploymentConfig.config).map(async ([chainName, config]) => {
+          const validGnosisSafe = await isGnosisSafe(multiProvider, config.owner, chainName);
+          return !validGnosisSafe ? { chainName, config } : undefined;
+        }),
+      )
+    ).filter((x): x is NonSafeOwnersConfig => Boolean(x));
+
+    setLoading(false);
+    if (invalidOwners.length > 0) {
+      setNonSafeOwners(invalidOwners);
+      return open();
+    }
+
+    onConfirmContinue();
+  };
+
   return (
-    <div className="flex w-full flex-col items-stretch sm:max-w-128">
-      <div className="space-y-5">
-        <HeaderSection />
-        <ConfigSection />
-        <InfoSection />
-        <ButtonSection />
+    <>
+      <div className="flex w-full flex-col items-stretch sm:max-w-128">
+        <div className="space-y-5">
+          <HeaderSection />
+          <ConfigSection />
+          <InfoSection />
+          <ButtonSection onClickContinue={onClickContinue} loading={loading} />
+        </div>
       </div>
-    </div>
+      <OwnerAddressConfirmModal
+        close={onClose}
+        isOpen={isOpen}
+        onConfirm={onConfirmContinue}
+        nonSafeOwners={nonSafeOwners}
+      />
+    </>
   );
 }
 
@@ -173,40 +244,25 @@ function InfoSection() {
   );
 }
 
-function ButtonSection() {
-  const { isPending, checkBalances } = useCheckAccountBalances();
-  const { deploymentConfig } = useWarpDeploymentConfig();
-  const { addDeployment } = useDeploymentHistory();
-  const { setPage } = useCardNav();
-
-  const onClickContinue = async () => {
-    if (!deploymentConfig) return;
-    // Re-validate config before proceeding in case edits broke something
-    const schemaResult = WarpRouteDeployConfigSchema.safeParse(deploymentConfig.config);
-    if (!schemaResult.success) {
-      toast.error('Invalid config, please fix before deploying');
-      return;
-    }
-
-    const chainNames = deploymentConfig.chains;
-    const balanceResult = await checkBalances(chainNames);
-    if (!balanceResult?.success) {
-      toast.error(balanceResult.error);
-      return;
-    }
-
-    addDeployment({
-      status: DeploymentStatus.Configured,
-      config: deploymentConfig,
-    });
-    setPage(CardPage.WarpDeploy);
-  };
+function ButtonSection({
+  onClickContinue,
+  loading,
+}: {
+  onClickContinue: () => Promise<void>;
+  loading: boolean;
+}) {
+  const { isPending } = useCheckAccountBalances();
 
   return (
     <div className="mt-4 flex items-center justify-between">
-      <BackButton page={CardPage.WarpForm} />
-      <SolidButton onClick={onClickContinue} className="gap-3 px-5 py-2" color="accent">
-        {isPending ? (
+      <BackButton page={CardPage.WarpForm} disabled={isPending || loading} />
+      <SolidButton
+        onClick={onClickContinue}
+        className="gap-3 px-5 py-2"
+        color="accent"
+        disabled={isPending || loading}
+      >
+        {isPending || loading ? (
           <SpinnerIcon width={20} height={20} color={Color.white} className="mx-6" />
         ) : (
           <>
