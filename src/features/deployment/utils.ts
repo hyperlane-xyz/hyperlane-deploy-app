@@ -1,3 +1,5 @@
+import { WarpCoreConfig } from '@hyperlane-xyz/sdk';
+import { assert } from '@hyperlane-xyz/utils';
 import { tryClipboardSet } from '@hyperlane-xyz/widgets';
 import { toast } from 'react-toastify';
 import { stringify } from 'yaml';
@@ -22,4 +24,41 @@ export function downloadYamlFile(config: unknown | undefined, filename: string) 
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+export function parseWarpRouteConfigId(warpRouteId: string) {
+  const [symbol, label] = warpRouteId.split('/');
+  assert(label, `Invalid warpRouteId format: ${warpRouteId}. Expected format: "prefix/label`);
+
+  return { symbol, label };
+}
+
+export function getConfigsFilename(warpRouteId: string) {
+  const { label } = parseWarpRouteConfigId(warpRouteId);
+
+  return {
+    deployConfigFilename: `${label}-deploy.yaml`,
+    warpConfigFilename: `${label}-config.yaml`,
+  };
+}
+
+export function sortWarpCoreConfig(warpCoreConfig?: WarpCoreConfig): WarpCoreConfig | undefined {
+  if (!warpCoreConfig) return undefined;
+
+  const tokens = warpCoreConfig.tokens;
+
+  const sortedTokens = [...tokens]
+    .sort((a, b) => a.chainName.localeCompare(b.chainName))
+    .map((token) => ({
+      ...token,
+      connections: token.connections
+        ? [...token.connections].sort((a, b) => {
+            const chainA = a.token.split('|')[1] || '';
+            const chainB = b.token.split('|')[1] || '';
+            return chainA.localeCompare(chainB);
+          })
+        : undefined,
+    }));
+
+  return { ...warpCoreConfig, tokens: sortedTokens };
 }

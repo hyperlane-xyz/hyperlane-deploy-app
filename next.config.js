@@ -1,17 +1,21 @@
 /** @type {import('next').NextConfig} */
 
-const { version } = require('./package.json')
-const { withSentryConfig } = require("@sentry/nextjs");
+const { version } = require('./package.json');
+const { withSentryConfig } = require('@sentry/nextjs');
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
-})
+});
 
-const isDev = process.env.NODE_ENV !== 'production'
+const isDev = process.env.NODE_ENV !== 'production';
 
 // Sometimes useful to disable this during development
 const ENABLE_CSP_HEADER = true;
-const FRAME_SRC_HOSTS = ['https://*.walletconnect.com', 'https://*.walletconnect.org','https://*.solflare.com'];
-const STYLE_SRC_HOSTS = []
+const FRAME_SRC_HOSTS = [
+  'https://*.walletconnect.com',
+  'https://*.walletconnect.org',
+  'https://*.solflare.com',
+];
+const STYLE_SRC_HOSTS = [];
 const IMG_SRC_HOSTS = ['https://*.walletconnect.com', 'https://*.githubusercontent.com'];
 const cspHeader = `
   default-src 'self';
@@ -27,7 +31,9 @@ const cspHeader = `
   frame-ancestors 'none';
   ${!isDev ? 'block-all-mixed-content;' : ''}
   ${!isDev ? 'upgrade-insecure-requests;' : ''}
-`.replace(/\s{2,}/g, ' ').trim();
+`
+  .replace(/\s{2,}/g, ' ')
+  .trim();
 
 const securityHeaders = [
   {
@@ -54,8 +60,8 @@ const securityHeaders = [
           value: cspHeader,
         },
       ]
-    : [])
-]
+    : []),
+];
 
 const nextConfig = {
   webpack(config) {
@@ -72,7 +78,7 @@ const nextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
-    ]
+    ];
   },
 
   env: {
@@ -80,14 +86,25 @@ const nextConfig = {
   },
 
   reactStrictMode: true,
-}
+
+  experimental: {
+    optimizePackageImports: [
+      '@hyperlane-xyz/registry',
+      '@hyperlane-xyz/sdk',
+      '@hyperlane-xyz/utils',
+      '@hyperlane-xyz/widgets',
+      '@rainbow-me/rainbowkit',
+      '@solana/spl-token',
+    ],
+  },
+};
 
 const sentryOptions = {
-  org: "hyperlane",
-  project: "warp-ui",
+  org: 'hyperlane',
+  project: 'deploy-app',
   authToken: process.env.SENTRY_AUTH_TOKEN,
   hideSourceMaps: true,
-  tunnelRoute: "/monitoring-tunnel",
+  tunnelRoute: '/monitoring-tunnel',
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
     excludeReplayIframe: true,
