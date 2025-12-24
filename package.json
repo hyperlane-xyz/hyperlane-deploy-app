@@ -46,7 +46,7 @@
     "formik": "^2.4.6",
     "framer-motion": "^11.13.1",
     "human-id": "^4.1.1",
-    "next": "^15.0.3",
+    "next": "15.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-toastify": "^10.0.6",
